@@ -1,0 +1,124 @@
+# CI — runs on every PR and every push to main.
+#
+# TODO(template) fill in the build-and-test job and delete the ecosystem blocks
+# you do not use. Keep the job count low: every job is billed per run and read by
+# a human on every red. Add a job when something it would have caught actually
+# happens, not because it is good practice.
+#
+# ACTION PINNING. Third-party actions are pinned to a full commit SHA with a
+# trailing `# vX.Y.Z` comment — never a mutable tag. Tag-retargeting is a live
+# supply-chain attack shape (tj-actions/changed-files 2025-03,
+# aquasecurity/trivy-action 2026-03): with a tag you review one thing and run
+# another. `actions/*` and `github/*` may keep major-version tags.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # TODO(template) toolchain setup, restore, build, test.
+      #
+      # If your ecosystem has lock files, restore in LOCKED mode — a stale lock
+      # must fail the run rather than silently resolving to different versions
+      # than the ones a human reviewed.
+      #   npm ci                                   (not `npm install`)
+      #   dotnet restore --locked-mode
+      #   pip install --require-hashes -r ...
+      - name: Build and test
+        run: |
+          echo "TODO(template): build and test" >&2
+          exit 1
+
+      # Vulnerability gate over the whole dependency tree. Fails closed: an
+      # unreadable or error-shaped report is exit 2, not "clean". `|| true` on
+      # the audit command is deliberate — the exit code carries no information we
+      # want, the parsed report does — and it is safe only because the gate
+      # validates the report SHAPE before trusting an empty finding list.
+      #
+      # TODO(template) enable the ecosystems you use; delete the rest.
+      #
+      # - name: Audit npm production dependencies
+      #   working-directory: web
+      #   run: |
+      #     npm audit --json --omit=dev > audit.json || true
+      #     node ../.github/scripts/vuln-gate.mjs --ecosystem npm --level high < audit.json
+      #
+      # - name: Audit NuGet dependencies
+      #   run: |
+      #     dotnet list package --vulnerable --include-transitive \
+      #       --format json --output-version 1 > audit.json || true
+      #     node .github/scripts/vuln-gate.mjs --ecosystem nuget --level high < audit.json
+
+      - name: Test the vulnerability gate itself
+        run: node --test .github/scripts/*.test.mjs
+
+  # PR-only: fails when a PR ADDS a dependency with a known vulnerability, before
+  # it lands on main. Complements the audit gates above (which score the whole
+  # tree) by scoring the DIFF, so a newly introduced bad dep is named in the PR.
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # dependency-review needs the repo's Dependency graph, a one-time owner
+      # toggle (Settings → Advanced Security → Dependency graph) with no API to
+      # flip it. Probe for it and branch on the HTTP status: only a definitive
+      # graph-disabled response (403/404) skips the review — with a loud warning
+      # naming the setting, so the gate self-activates on the next PR once the
+      # toggle is on. A transient or unexpected status does NOT skip; the review
+      # runs and surfaces the real error rather than silently disabling the gate.
+      - name: Check the Dependency graph is enabled
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          code="$(gh api "repos/$REPO/dependency-graph/sbom" --silent -i 2>/dev/null \
+            | awk 'toupper($1) ~ /^HTTP/ {print $2; exit}')"
+          case "$code" in
+            200)
+              echo "available=true" >> "$GITHUB_OUTPUT" ;;
+            403|404)
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "::warning title=Dependency review inactive::Enable the Dependency graph at Settings → Advanced Security → Dependency graph; this gate activates automatically once it is on." ;;
+            *)
+              echo "available=true" >> "$GITHUB_OUTPUT"
+              echo "::warning title=Dependency graph probe inconclusive::sbom probe returned '${code:-no response}'; running dependency-review anyway so a real error is not masked." ;;
+          esac
+
+      # Same source of truth as the audit gates: the live (unexpired) GHSA ids in
+      # security-exceptions.json become this action's allowlist, so the two gates
+      # can never disagree about what is currently excepted. emitAllowlist yields
+      # only bare, canonical GHSA ids; `tr -d` strips any stray newline as
+      # defence in depth, so a single value can never forge a second
+      # GITHUB_OUTPUT record.
+      - name: Compute allowlist from security exceptions
+        if: steps.graph.outputs.available == 'true'
+        id: allow
+        run: |
+          ghsas="$(node .github/scripts/vuln-gate.mjs --emit-allowlist | tr -d '\r\n')"
+          printf 'ghsas=%s\n' "$ghsas" >> "$GITHUB_OUTPUT"
+
+      - name: Review dependency changes
+        if: steps.graph.outputs.available == 'true'
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          allow-ghsas: ${{ steps.allow.outputs.ghsas }}

@@ -1,0 +1,37 @@
+# Weekly dependency audit.
+#
+# WHY THIS EXISTS SEPARATELY FROM CI. The CI gates only run when someone opens a
+# PR. An advisory published against a dependency you already ship is not caught
+# by anything until the next PR happens to touch the repo — which on a quiet
+# week is never. This run is the clock.
+#
+# It uses the SAME gate and the SAME exceptions file as CI, so the two can never
+# disagree about what is currently excepted.
+name: Security audit
+
+on:
+  schedule:
+    # Monday 06:00 UTC. Cron on a schedule trigger runs against the default
+    # branch only, which is what you want here.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # TODO(template) toolchain setup + the same audit steps as ci.yml.
+      # Keep them identical; a scheduled gate that is weaker than the PR gate
+      # produces a green Monday and a red Tuesday for the same tree.
+      - name: Audit
+        run: |
+          echo "TODO(template): run the same vuln-gate steps as ci.yml" >&2
+          exit 1

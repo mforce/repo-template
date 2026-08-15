@@ -1,0 +1,80 @@
+# Release automation.
+#
+# WHAT IT DOES. On every push to main, release-please reads the conventional
+# commits since the last release and maintains a standing "Release vX.Y.Z" PR
+# holding the changelog and version bump. Merging that PR drafts the GitHub
+# release.
+#
+# THE RELEASE STAYS A DRAFT. GitHub withholds the git tag for a draft release,
+# so if you add a publish/promote step (see
+# docs/decisions/002-release-and-publish.md) a failed publish leaves no version
+# tag pointing at nothing. With no publish step, undraft it manually or set
+# `"draft": false` in release-please-config.json.
+#
+# TOKEN. GITHUB_TOKEN cannot open a PR unless a repo-wide setting is on, and the
+# PRs it does open get NO CI run — so the release PR would merge unverified. A
+# GitHub App token avoids both. It is optional here: set the two secrets and the
+# App path is used, otherwise it falls back to GITHUB_TOKEN with the caveats
+# above.
+#
+# If you use the App: `permission-*` downscoping is MANDATORY. Omitting those
+# inputs mints a token carrying the union of every grant the App holds, in every
+# repo it is installed on — silently.
+name: Release please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    name: Maintain the release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      # secrets are not available in `if:` expressions, so surface the presence
+      # of the client id through env, which is.
+      APP_CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+    steps:
+      - name: Mint a GitHub App token
+        id: app-token
+        if: env.APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          # Downscope. Never omit these.
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Warn when falling back to GITHUB_TOKEN
+        if: env.APP_CLIENT_ID == ''
+        run: |
+          echo "::warning title=No release App configured::Using GITHUB_TOKEN. The release PR will get no CI run, and PR creation needs 'Allow GitHub Actions to create and approve pull requests' enabled in repo settings. Set RELEASE_APP_CLIENT_ID / RELEASE_APP_PRIVATE_KEY to use a GitHub App instead."
+
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # TODO(template) if you publish artifacts, gate them on this output and
+      # read docs/decisions/002-release-and-publish.md first — in particular:
+      # promotion is a retag of the reviewed bytes, never a rebuild.
+      - name: Report
+        env:
+          RELEASED: ${{ steps.release.outputs.release_created }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          if [ "$RELEASED" = "true" ]; then
+            echo "Drafted release $TAG."
+          else
+            echo "No release this run; the release PR (if any) was refreshed."
+          fi

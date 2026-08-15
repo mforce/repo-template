@@ -1,0 +1,19 @@
+# TODO(template) add your stack's ignores.
+
+# Editors / OS
+.DS_Store
+.idea/
+*.swp
+
+# Real secrets. Only the *.example placeholders are tracked.
+.env
+*.env
+!*.env.example
+
+# Common build/dependency output
+node_modules/
+dist/
+build/
+coverage/
+bin/
+obj/

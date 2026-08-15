@@ -1,0 +1,52 @@
+#!/bin/sh
+# Pre-commit: fast checks for the stacks the commit touches.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Skip once:               git commit --no-verify   (or SKIP_HOOKS=1)
+#
+# BUDGET: ~2 seconds. This is a tripwire, not a gate — CI is the authority and
+# runs the full suite on every PR. Anything needing Docker, a database, a
+# network call or a full build belongs there, not here. A hook that costs 30s
+# gets disabled, and then it catches nothing.
+#
+# POSIX sh on purpose: git invokes the shebang directly, and sh exists everywhere
+# git does (including git-for-windows).
+set -eu
+
+[ "${SKIP_HOOKS:-0}" = "1" ] && exit 0
+
+# Checks run against the WORKING TREE, not the staged snapshot — with partial
+# staging (git add -p) the hook can pass while the staged content alone would
+# not build. Acceptable for a tripwire; CI checks the real tree.
+#
+# D is included: deleting a source file can break references just as well as
+# editing one.
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
+
+fail() { echo "pre-commit: FAILED ($1) — fix or use --no-verify." >&2; exit 1; }
+
+# TODO(template) one block per stack. Pattern:
+#
+#   if echo "$staged" | grep -qE '<path or extension filter>'; then
+#     echo "pre-commit: <what is running>..."
+#     <fast command> || fail "<name>"
+#   fi
+#
+# Examples to adapt or delete:
+#
+# if echo "$staged" | grep -qE '\.sln$|\.cs(proj)?$'; then
+#   echo "pre-commit: unit tests..."
+#   dotnet test tests/Unit.Tests --nologo -v q || fail "unit tests"
+# fi
+#
+# if echo "$staged" | grep -q '^web/'; then
+#   echo "pre-commit: typecheck..."
+#   (cd web && npm run --silent typecheck) || fail "typecheck"
+# fi
+#
+# if echo "$staged" | grep -qE '\.py$'; then
+#   echo "pre-commit: lint..."
+#   ruff check . || fail "lint"
+# fi
+
+exit 0

@@ -99,10 +99,24 @@ either re-proposes a version that is already released or skips one.
 ## Reference implementation — OCI images on GHCR
 
 The invariants above are registry-agnostic; this is one concrete wiring of them
-for OCI images pushed to GHCR, proven in a real repo. Copy the jobs, then fill
-the `TODO(template)` markers. Everything registry-specific is a `vars`/`secrets`
-lookup, so the same jobs target Gitea/Harbor by setting `REGISTRY`, `IMAGE_NAME`,
-`REGISTRY_USER`, `REGISTRY_TOKEN` — no YAML change.
+for OCI images pushed to GHCR, adapted from the pipeline proposed in
+[mforce/collectify#116](https://github.com/mforce/collectify/pull/116) (not yet
+merged, so treat it as a worked design, not a battle-tested one). Copy the jobs,
+then fill the `TODO(template)` markers. Everything registry-specific is a
+`vars`/`secrets` lookup, so the same jobs target Gitea/Harbor by setting
+`REGISTRY`, `IMAGE_NAME`, `REGISTRY_USER`, `REGISTRY_TOKEN` — no YAML change.
+
+> **The jobs below are the single-arch (`linux/amd64`) variant — the simplest
+> one.** `--load`, `docker save`, and the image-Id handoff are all
+> single-platform, and that is exactly what lets the same bytes be scanned,
+> boot-tested, *and* handed to publish unchanged. A multi-arch manifest list can
+> round-trip through none of them. Publishing `linux/amd64+arm64` (which the
+> linked collectify pipeline does, for Raspberry Pi / Apple Silicon) means
+> replacing the save/load handoff with a **push-by-digest** build (`--output
+> type=image,push-by-digest=true`), then a server-side `imagetools create` tag in
+> publish — scanning and booting the native arch and trusting the builder for the
+> other. Decide the arch coverage consciously; don't let a template make that
+> call for you.
 
 Add to the top of **both** `ci.yml` and `release-please.yml`:
 
@@ -122,7 +136,10 @@ a `TODO(template)`. The contract it must satisfy for the publish job below:
   built bytes, not a re-pull.
 - **Scan it** (Trivy `severity: HIGH,CRITICAL`, `ignore-unfixed: true`,
   `exit-code: 1`) and **boot it** — prove it starts and serves, not just that it
-  builds. A green scan on an unbootable image is a false pass.
+  builds. A green scan on an unbootable image is a false pass. Pin
+  `aquasecurity/trivy-action` to a **commit SHA**, not a tag — it is the named
+  2026-03 tag-retargeting incident, so this is the one action where the rule is
+  not optional.
 - Only on a merge to `main` (or a repair dispatch), `docker save | gzip` the
   image to an artifact named `runtime-image`, and expose the local image Id as a
   job output so the publish job can prove the handoff carried the scanned bytes:
@@ -210,7 +227,9 @@ attestation leaves no artifact behind.
           fi
 
       - name: Log in to ${{ env.REGISTRY }}
-        uses: docker/login-action@v4
+        # docker/* is third-party — SHA-pin it (resolve the current commit for
+        # your chosen version and keep the trailing `# vX` for Dependabot).
+        uses: docker/login-action@<commit-sha> # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.REGISTRY_USER || 'x-access-token' }}
@@ -295,7 +314,7 @@ The load-bearing details, each of which has a wrong default:
   `--bundle-from-oci` (read the registry copy), `--signer-workflow` (bind to the
   workflow path), `--source-ref refs/heads/main` (bind to the ref — so a repair
   dispatch must run *from* main). Boundary in the section above.
-- **`gh buildx imagetools inspect --format '{{json .Manifest.Digest}}'`** to
+- **`docker buildx imagetools inspect --format '{{json .Manifest.Digest}}'`** to
   confirm the retag — the non-`json` form is mis-detected by older buildx and
   prints the whole manifest dump.
 - **`groom`'s draft guard needs push access** (an App token, not the job's

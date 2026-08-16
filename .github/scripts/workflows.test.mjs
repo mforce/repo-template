@@ -148,11 +148,29 @@ test("release automation stays idle while the package name is the template place
   // Both files the gate reads have to be IN the checkout. A sparse checkout that
   // omits one makes `[ -f ]` false everywhere and the test above cannot see it:
   // the workflow reads correctly and behaves as if the file never exists.
-  const sparse = workflow.body.match(/sparse-checkout: \|\n([\s\S]*?)\n\s*sparse-checkout-cone-mode/);
-  assert.ok(sparse, "release-please.yml must list its sparse-checkout paths in a block scalar");
+  //
+  // Only when the checkout IS sparse. Dropping the narrowing for a plain full
+  // checkout leaves both files present and the workflow correct, and an earlier
+  // version failed there — a red on a change that broke nothing.
+  const key = workflow.body.match(/^([ \t]*)sparse-checkout:[ \t]*(.*)$/m);
+  if (!key) return;
+
+  let listed;
+  if (key[2].trim().startsWith("|")) {
+    const after = workflow.body.slice(workflow.body.indexOf(key[0]) + key[0].length).split("\n").slice(1);
+    listed = [];
+    for (const line of after) {
+      if (line.trim() === "") continue;
+      if (line.length - line.replace(/^[ \t]*/, "").length <= key[1].length) break;
+      listed.push(line.trim());
+    }
+  } else {
+    listed = [key[2].trim()]; // one path, inline
+  }
+
   for (const file of ["release-please-config.json", "TEMPLATE-SETUP.md"]) {
     assert.ok(
-      sparse[1].split("\n").some((l) => l.trim() === file),
+      listed.includes(file),
       `${file} is read by the gate but not in the sparse-checkout — it will be missing at ` +
         `runtime, and the gate reads a repo that does not contain it`,
     );

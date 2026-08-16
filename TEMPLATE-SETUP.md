@@ -10,6 +10,16 @@ finds the ones you have not done.
 - [ ] `README.md` — replace this template's README with the project's.
 - [ ] `CONTRIBUTING.md` — repo URL, branch prefixes if they differ.
 - [ ] `.gitignore` — add your stack's ignores (this one covers only the basics).
+- [ ] `.gitattributes` — add your stack's binary/generated rules. **Leave
+      `* text=auto eol=lf` alone**: `.githooks/*` are POSIX `sh`, and a CRLF
+      checkout makes git look for an interpreter named `/bin/sh\r`, failing with
+      a message that names neither the hook nor the cause.
+- [ ] `.editorconfig` — add your stack's indent overrides. It is a convenience,
+      not a gate; nothing enforces it.
+- [ ] `SECURITY.md` — pick a reporting channel, delete the others, and set the
+      supported-versions answer. Promise only what you will actually do.
+- [ ] Add a `LICENSE`. Deliberately not shipped — the choice is yours, and a
+      placeholder license is worse than none.
 
 ## 2. Build and test
 
@@ -20,6 +30,11 @@ finds the ones you have not done.
       repo cannot ship a vacuously green build job.
 - [ ] `.githooks/pre-commit` → the per-stack blocks and their path filters.
   Keep it under ~2s. Anything slower belongs in CI.
+- [ ] Install [`actionlint`](https://github.com/rhysd/actionlint) and
+      [`shellcheck`](https://www.shellcheck.net) so the workflow/shell block in
+      `pre-commit` actually runs. It **warns and continues** when they are
+      missing, so those checks are genuinely optional — do not treat "the hook
+      is enabled" as "the workflows are linted".
 
 ## 3. Releases
 
@@ -62,6 +77,15 @@ finds the ones you have not done.
       account can merge a change to `.github/workflows/` and every gate in this
       repo trusts it.** Nothing inside the repo can close that; only branch
       protection can.
+- [ ] `.github/CODEOWNERS` — uncomment the rules and replace `@OWNER` with a real
+      user or `@org/team` **with write access**, then tick branch protection's
+      **"Require review from Code Owners"**. Both halves are needed: an entry
+      that does not resolve is silently ignored by GitHub, and without the tick
+      the file only suggests reviewers. Verify by opening a PR that touches
+      `.github/` and confirming the owner is auto-requested.
+- [ ] `.github/pull_request_template.md` — prune the checklist to the rules this
+      repo actually enforces. A box nobody can fail teaches people to tick
+      without reading.
 - [ ] Squash-merge on; set the squash title source to the PR title (see the
       commit-message note in `CONTRIBUTING.md`).
 

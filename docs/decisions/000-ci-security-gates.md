@@ -122,8 +122,18 @@ routine batch.
 
 **A merge to `main` that changes the workflows themselves.** Once a modified
 `ci.yml` is the definition on `main`, every gate here runs exactly as that file
-says, and any attestation it produces is genuinely valid. Nothing inside the
-repo closes that — **branch protection and review of changes to `main` are the
-only controls that do.** If `main` requires a PR but zero approving reviews, a
-single account can merge a change to any file in `.github/` and every claim on
-this page becomes whatever that file now says.
+says, and any attestation it produces is genuinely valid. If `main` requires a PR
+but zero approving reviews, a single account can merge a change to any file in
+`.github/` and every claim on this page becomes whatever that file now says.
+
+[`.github/CODEOWNERS`](../../.github/CODEOWNERS) is the closest the repo itself
+gets to a lever on this: with branch protection's *"Require review from Code
+Owners"* ticked, a `.github/` change cannot merge with nobody having looked. It
+is **not** a control on its own — an owner approving their own change is no
+review, and the file ships inert because a CODEOWNERS entry naming an
+unresolvable user is silently ignored by GitHub, which is precisely the "reads as
+safety, checks nothing" shape of
+[`001-writing-a-guard.md`](001-writing-a-guard.md).
+
+**Branch protection and review of changes to `main` remain the only real
+controls.** Nothing in the repo can substitute for them.

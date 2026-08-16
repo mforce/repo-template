@@ -1,0 +1,49 @@
+# Code owners — required reviewers per path.
+#
+# WHY THIS FILE EXISTS
+#
+# `docs/decisions/000-ci-security-gates.md` ends by naming the one thing none of
+# the CI gates cover: a merge to `main` that changes the workflows themselves.
+# Once a modified `ci.yml` is the definition on `main`, every gate runs exactly
+# as that file now says, and any attestation it produces is genuinely valid.
+#
+# This file plus branch protection's **"Require review from Code Owners"** is the
+# closest thing the repo has to a lever on that. It is still not a control on its
+# own — an owner reviewing their own change is no review — but it removes the
+# case where a `.github/` change merges with nobody having looked.
+#
+# SHIPPED INERT ON PURPOSE
+#
+# Every rule below is commented out. A CODEOWNERS entry naming a user or team
+# that cannot be resolved is **silently ignored by GitHub** — the file stays in
+# place, the branch-protection box stays ticked, and nothing is ever required.
+# That is the exact failure `docs/decisions/001-writing-a-guard.md` is about: a
+# guard that reads as safety while checking nothing. An obviously-empty file is
+# honest; a plausible-looking broken one is not.
+#
+# TODO(template) SET UP
+#
+#   1. Uncomment the rules and replace @OWNER with a real GitHub user or
+#      @org/team that has **write access** to this repo. Anything else resolves
+#      to nothing.
+#   2. Branch protection → Require a pull request → tick "Require review from
+#      Code Owners". Without that tick this file only suggests reviewers.
+#   3. Confirm it resolved: open a PR touching `.github/` and check that the
+#      owner is auto-requested. If nobody is requested, the entry is broken.
+#
+# Syntax is gitignore-style; the LAST matching rule wins, so put the narrowest
+# rules last.
+
+# Everything, as a fallback.
+# *                        @OWNER
+
+# The gates, and the things that decide what the gates mean. These are the paths
+# where a self-merge silently rewrites what every other check is asserting.
+# /.github/                @OWNER
+# /.githooks/              @OWNER
+# /CODEOWNERS              @OWNER
+# /.github/CODEOWNERS      @OWNER
+
+# The decision record. Changing the rationale without changing the mechanism —
+# or the reverse — is how the two drift apart.
+# /docs/decisions/         @OWNER

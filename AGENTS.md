@@ -112,6 +112,12 @@ unit tests / typecheck) and a `commit-msg` check that keeps the message
 parseable by release-please. Slow tiers are deliberately excluded — CI is the
 authority. Skip once with `--no-verify` or `SKIP_HOOKS=1`.
 
+`pre-commit` also runs **actionlint** on changed workflows and **shellcheck** on
+changed shell, because neither has a compiler and a red CI run minutes later is
+the alternative. Both **warn and continue when not installed** — they are not
+repo dependencies, so "the hook is enabled" does not mean "the workflows are
+linted".
+
 ## CI security gates
 
 CI fails a PR when a **production** dependency carries a known **high+**
@@ -132,6 +138,14 @@ TODO(template) if your ecosystem uses lock files, state here that a package
 add/bump must commit the regenerated lock file **in the same commit**, or CI's
 locked-mode restore fails.
 
+None of those gates covers a merge to `main` that changes the workflows
+themselves — after it, every gate runs exactly as the modified file says.
+[`.github/CODEOWNERS`](.github/CODEOWNERS) plus branch protection's *"Require
+review from Code Owners"* is the only lever the repo has on that, and it ships
+**inert**: an entry naming an unresolvable user is silently ignored, which is a
+guard that reads as safety while checking nothing.
+
+Reporting policy and the exception process: [`SECURITY.md`](SECURITY.md).
 Rationale: [`docs/decisions/000-ci-security-gates.md`](docs/decisions/000-ci-security-gates.md).
 
 ## Releases

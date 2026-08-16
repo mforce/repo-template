@@ -13,9 +13,9 @@ Most items correspond to a `TODO(template)` marker in the tree —
   `codeql.yml` shipped a `language:` matrix defaulting to `["actions"]` while
   this checklist named the file only for a repo setting — an adopter could tick
   everything and still have CodeQL passing green having never analysed their
-  application code. `.github/scripts/template.test.mjs` now catches the
-  file-level version of that mistake, and says plainly that it does **not** catch
-  the slot-level one.
+  application code. **Nothing enforces this**; it is a habit, not a check. An
+  automated version was tried and withdrawn — see
+  [`docs/decisions/003-the-checklist-guard-that-was-withdrawn.md`](docs/decisions/003-the-checklist-guard-that-was-withdrawn.md).
 
 ## 1. Identity
 

@@ -14,7 +14,10 @@ finds the ones you have not done.
 ## 2. Build and test
 
 - [ ] `AGENTS.md` → `## Build / test / run` — the actual commands.
-- [ ] `.github/workflows/ci.yml` → the `build-and-test` job steps.
+- [ ] `.github/workflows/ci.yml` → the `build-and-test` job steps. The shipped
+      placeholder **passes while this file exists and fails once you delete it**
+      (step 7), so an un-set-up template is not permanently red and a set-up
+      repo cannot ship a vacuously green build job.
 - [ ] `.githooks/pre-commit` → the per-stack blocks and their path filters.
   Keep it under ~2s. Anything slower belongs in CI.
 
@@ -47,6 +50,9 @@ finds the ones you have not done.
 - [ ] Repo settings → **Advanced Security → Dependency graph: on**. The
       `dependency-review` job self-activates once it is; until then it warns on
       every PR rather than passing silently.
+- [ ] Repo settings → **Advanced Security → Code scanning: on**. `codeql.yml`
+      behaves the same way — it skips with a warning until the toggle is on,
+      rather than failing the run for a setting no code change can fix.
 - [ ] Repo settings → **Dependabot alerts: on**.
 
 ## 5. Branch protection

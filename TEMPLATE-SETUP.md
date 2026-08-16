@@ -18,8 +18,16 @@ finds the ones you have not done.
       not a gate; nothing enforces it.
 - [ ] `SECURITY.md` — pick a reporting channel, delete the others, and set the
       supported-versions answer. Promise only what you will actually do.
-- [ ] Add a `LICENSE`. Deliberately not shipped — the choice is yours, and a
-      placeholder license is worse than none.
+- [ ] **Replace `LICENSE` with your project's.** The one shipped here is MIT and
+      covers *this template* — it is what lets you copy these files at all, not a
+      recommendation for what you build. Two things follow:
+
+      - a **public** repo with no `LICENSE` is all-rights-reserved, so pick one
+        before you publish rather than after;
+      - MIT asks that its notice be preserved in substantial copies. If you keep
+        large parts of the scaffolding verbatim and that matters to you, keep the
+        attribution; if it does not fit your project, say so with the template
+        author rather than assuming.
 
 ## 2. Build and test
 

@@ -46,3 +46,9 @@ rules from the cargo cult.
 So this template ships the **slots**, each with a one-line note on why the
 section exists — not filled-in content. Write a rule the first time something
 bites you, and cite the incident in it.
+
+## License
+
+[MIT](LICENSE). That covers **this template**; it is what lets you copy these
+files, not a recommendation for what you build. Replace `LICENSE` with your
+project's own — `TEMPLATE-SETUP.md` step 1 has the detail.

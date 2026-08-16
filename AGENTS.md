@@ -149,6 +149,11 @@ means, and that promotion is a **retag of the reviewed bytes, never a rebuild**.
   only thing enforcing it. A successful push is not permission.
 - Branches: `feat/…`, `fix/…`, `chore/…`, `docs/…`. PRs squash-merge.
 - Only commit or push when the human asks.
+- **Keep commit messages and PR bodies short** — a conventional subject and a few
+  lines of *why*. Expand only when asked, or when a reviewer needs the detail to
+  judge the change. A squash-merge puts the body in `main`'s history for good, so
+  length there outlives the PR. Earned: a PR whose whole point was cutting 3,000
+  words of docs shipped with 1,800 words of commit message across six commits.
 - TODO(template) issue-tracker conventions: which tracker is authoritative,
   epic/milestone rules.
 - TODO(template) documentation-sync rule: which files must be updated in the same

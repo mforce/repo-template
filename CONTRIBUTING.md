@@ -36,6 +36,9 @@ docs|chore|test|ci|build|style    → patch, hidden from the changelog
 feat!: … / BREAKING CHANGE:       → major (minor below 1.0.0)
 ```
 
+Keep them short: a subject and a few lines of *why*. The squashed body lands in
+`main` permanently, so it outlives the PR that carried it.
+
 Two traps, both producing a **green run with no release entry**:
 
 1. **The PR title is the release note.** On a multi-commit PR the squashed

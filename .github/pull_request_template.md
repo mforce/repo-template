@@ -10,7 +10,8 @@ sees the PR title.
 
 ## What and why
 
-<!-- What changed and the problem it solves. Link the issue. -->
+<!-- What changed and the problem it solves, in a few lines. Link the issue.
+     This body becomes the squashed commit in main — keep it short. -->
 
 ## How it was verified
 

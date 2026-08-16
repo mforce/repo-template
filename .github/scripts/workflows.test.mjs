@@ -73,8 +73,23 @@ test("every unimplemented placeholder is keyed to TEMPLATE-SETUP.md, not an unco
 // setting is on — so the first push to main goes red for a reason no branch can
 // fix. That is the shape docs/decisions/000 rules out.
 //
-// The gate is one file grepping a literal string out of another, which stops
-// matching silently if either side is reworded. This pins them together.
+// The gate is one file grepping a literal string out of another, so it stops
+// matching silently if either side is reworded. Both sides are checked against
+// the declaration below rather than against each other — comparing them to each
+// other cannot tell a maintainer's typo from an adopter naming their package,
+// and the version that guessed (any name containing "TODO" is a placeholder)
+// would have gone red on an adopter who picked one.
+//
+// Reading the whole command, not the literal alone: `grep -qv` keeps the string
+// and inverts the gate, which would leave release automation idle forever in a
+// repo that finished setup.
+//
+// LIMIT, stated: an adopter's own package name is not checked against anything,
+// so rewording the placeholder in the config ALONE is not caught. That direction
+// arms the workflow rather than disarming it, and it shows up as the same red
+// this gate exists to prevent, on the first push after the change.
+const PLACEHOLDER = "TODO-template-package-name";
+
 test("release automation stays idle while the package name is the template placeholder", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const workflow = workflows.find((w) => w.name === "release-please.yml");
@@ -95,18 +110,28 @@ test("release automation stays idle while the package name is the template place
   );
   if (!workflow || !config) return;
 
-  const name = config.packages?.["."]?.["package-name"];
-  assert.ok(name, "release-please-config.json has no package-name for the root package");
-  // Once an adopter names the package the gate has done its job and opens; there
-  // is nothing left to pin, and asserting anything here would be a red they
-  // could not act on.
-  if (!name.includes("TODO")) return;
-
   assert.ok(
-    workflow.body.includes(name),
-    `release-please.yml must test for the exact placeholder ${JSON.stringify(name)} — it ` +
-      `greps the config for it to decide whether to run, so a reworded placeholder turns ` +
-      `the gate off and an un-set-up repo goes red on its first push to main`,
+    config.packages?.["."]?.["package-name"],
+    "release-please-config.json has no package-name for the root package",
+  );
+
+  // The match branch must be the idle one. Pinning the two together means a
+  // swap of the branches fails here rather than shipping an inverted gate.
+  const gate = workflow.body.match(
+    /if grep -q '([^']*)' release-please-config\.json; then\n\s*echo "named=false"/,
+  );
+  assert.ok(
+    gate,
+    "release-please.yml must gate on `grep -q '<placeholder>' release-please-config.json` " +
+      "with the matching branch setting named=false — any other spelling either inverts the " +
+      "gate or stops testing the config at all, and both are silent",
+  );
+  assert.equal(
+    gate[1],
+    PLACEHOLDER,
+    `release-please.yml greps for ${JSON.stringify(gate[1])}, but the template's placeholder ` +
+      `package name is ${JSON.stringify(PLACEHOLDER)} — a gate that cannot match arms release ` +
+      `automation on an un-set-up repo, which goes red on its first push to main`,
   );
   assert.match(
     workflow.body,

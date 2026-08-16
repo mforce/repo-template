@@ -21,10 +21,25 @@ the offending dependency in the PR that introduced it.
 
 ## A gate blocked on a repo setting warns; it does not fail
 
-Two of the four need a one-time owner toggle that no API can flip and no commit
-can supply: `dependency-review` needs **Dependency graph**, `codeql.yml` needs
-**Code scanning**. Left alone, both fail every PR on a fresh repo — for a reason
-that is not a defect in the change being reviewed.
+Two of the four need a one-time repo-level setting that no commit can supply:
+`dependency-review` needs **Dependency graph**, `codeql.yml` needs **Code
+scanning**. Left alone, both fail every PR on a fresh repo — for a reason that is
+not a defect in the change being reviewed.
+
+Neither is reachable from a workflow, but "no API can flip it" — which this
+section used to say — is wrong for the first one, and it sent readers to the web
+UI unnecessarily. Measured on this repo:
+
+- **Dependency graph** is switched on as a side effect of enabling Dependabot
+  alerts: `PUT /repos/{owner}/{repo}/vulnerability-alerts`. Isolated by
+  toggling each candidate separately and re-probing
+  `/dependency-graph/sbom` — 404 with alerts off, 200 with them on, and
+  `automated-security-fixes` makes no difference either way.
+- **Code scanning** needed no toggle at all once the repo was **public**; the
+  skip warning stopped on the next run with
+  `/code-scanning/default-setup` still reporting `not-configured`. Enabling
+  default setup through its API is *not* the fix — it conflicts with an advanced
+  workflow and rejects its SARIF.
 
 A red check nobody can fix from a branch is worse than a missing check, because
 it teaches everyone to merge past red, and that habit does not stay confined to

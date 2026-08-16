@@ -92,9 +92,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # dependency-review needs the repo's Dependency graph, a one-time owner
-      # toggle (Settings → Advanced Security → Dependency graph) with no API to
-      # flip it. Probe for it and branch on the HTTP status: only a definitive
+      # dependency-review needs the repo's Dependency graph — a one-time repo
+      # setting no commit can supply. It is not reachable from a workflow, but it
+      # IS reachable from a maintainer's CLI: `gh api -X PUT
+      # repos/<owner>/<repo>/vulnerability-alerts` turns it on as a side effect
+      # of enabling Dependabot alerts (see TEMPLATE-SETUP.md step 4).
+      # Probe for it and branch on the HTTP status: only a definitive
       # graph-disabled response (403/404) skips the review — with a loud warning
       # naming the setting, so the gate self-activates on the next PR once the
       # toggle is on. A transient or unexpected status does NOT skip; the review

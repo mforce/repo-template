@@ -11,11 +11,26 @@ keeps the message parseable by the release tooling. Both are skippable with
 `--no-verify` or `SKIP_HOOKS=1` — on purpose. A hook nobody can skip is a hook
 people route around.
 
+Optional, and worth it if you touch workflows or shell:
+
+```bash
+# actionlint — https://github.com/rhysd/actionlint
+# shellcheck — https://www.shellcheck.net
+```
+
+`pre-commit` runs them on the files you changed and **warns instead of failing
+when they are missing**, so nothing breaks without them — you just do not get
+the check.
+
 ## Branches and PRs
 
 - `main` is protected. Branch, push, open a PR.
 - Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`.
 - PRs squash-merge.
+- The PR body is prefilled from
+  [`.github/pull_request_template.md`](.github/pull_request_template.md). Delete
+  the checklist lines that do not apply rather than ticking them — a box nobody
+  can fail teaches people to tick without reading.
 
 ## Commit messages
 

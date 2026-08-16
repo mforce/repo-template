@@ -25,6 +25,62 @@ staged=$(git diff --cached --name-only --diff-filter=ACMRD)
 
 fail() { echo "pre-commit: FAILED ($1) — fix or use --no-verify." >&2; exit 1; }
 
+# --- workflows and shell -----------------------------------------------------
+#
+# These two are NOT a TODO(template) block: this repo's own substance is GitHub
+# workflows and POSIX shell, and neither has a compiler. A typo'd `runs-on`, a
+# `${{ }}` in the wrong context, an unquoted expansion — all of them are found by
+# a red CI run minutes later, or by nobody.
+#
+# Deliberately a hook and not a CI job: it lints the developer's edit, at the
+# moment of the edit, for zero billed minutes. A CI job would spend a runner per
+# push to say the same thing later.
+#
+# MISSING TOOL = WARN, NOT FAIL. Neither binary is a repo dependency, and a hook
+# that hard-fails on a machine without them is a hook people turn off. That means
+# these checks are genuinely OPTIONAL — do not cite them as a guarantee that
+# workflows are linted. Install them to get the benefit:
+#   actionlint  https://github.com/rhysd/actionlint  (go install / brew / binary)
+#   shellcheck  https://www.shellcheck.net           (apt / brew / pacman)
+lint_missing=""
+
+if echo "$staged" | grep -qE '^\.github/workflows/.*\.ya?ml$'; then
+  if command -v actionlint >/dev/null 2>&1; then
+    echo "pre-commit: actionlint..."
+    actionlint || fail "actionlint"
+  else
+    lint_missing="$lint_missing actionlint"
+  fi
+fi
+
+# `.githooks/*` are extensionless, so match the directory as well as `*.sh`.
+# Every candidate is filtered through `-f`: `$staged` includes DELETED paths, and
+# handing shellcheck a path that is gone fails the commit for no reason.
+scripts=$(echo "$staged" | grep -E '^\.githooks/|\.sh$' | grep -vE '\.md$' || true)
+existing=""
+for f in $scripts; do
+  [ -f "$f" ] && existing="$existing $f"
+done
+
+# An empty list must not reach shellcheck. With no file arguments it takes a
+# different path entirely — depending on the version, an error or a wait on
+# STDIN — and neither is a useful answer to "this commit touches no scripts".
+# Skip rather than find out.
+if [ -n "$existing" ]; then
+  if command -v shellcheck >/dev/null 2>&1; then
+    echo "pre-commit: shellcheck..."
+    # Extensionless hooks carry no filename hint, so let shellcheck read each
+    # file's own shebang rather than forcing `--shell`. -x follows sourced files.
+    # shellcheck disable=SC2086 # unquoted on purpose: $existing is a file list
+    shellcheck -x $existing || fail "shellcheck"
+  else
+    lint_missing="$lint_missing shellcheck"
+  fi
+fi
+
+[ -n "$lint_missing" ] && \
+  echo "pre-commit: NOT linted —${lint_missing} not installed. These checks were skipped." >&2
+
 # TODO(template) one block per stack. Pattern:
 #
 #   if echo "$staged" | grep -qE '<path or extension filter>'; then

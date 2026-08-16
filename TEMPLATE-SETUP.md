@@ -2,6 +2,11 @@
 
 Work through this after cloning, then **delete this file**.
 
+**Two ways to do it.** Run [`scripts/setup.sh`](scripts/setup.sh) yourself, or
+ask a coding agent to walk you through it — see *Agent-led setup* below. Either
+way the checklist is the same; the agent path just fills the slots as it goes.
+
+`./scripts/setup.sh` drops any parts you do not want before you start.
 `grep -rn 'TODO(template)' .` lists the markers in the tree. It is not the whole
 checklist — some items are repo settings no marker can represent, and one file
 can carry several markers. **Read every marker in a file you touch**, not just
@@ -66,7 +71,15 @@ withdrawn.
       `ci.yml`'s, so a fresh clone does not go red every Monday.
       `workflows.test.mjs` keeps the two consistent.
 - [ ] `.github/scripts/vuln-gate.mjs` — add a parser if your ecosystem is not npm
-      or NuGet (see the `PARSERS` map).
+      or NuGet (see the `PARSERS` map). The gate and the guards need **Node 18+**;
+      that is a dependency of the template's tooling, not of your project. CI
+      runners already have it. If you do not want node at all, you are dropping
+      `vuln-gate` **and** the guards. Delete `.github/scripts/` and **both** CI
+      consumers: the step that runs the tests, and the *Compute allowlist from
+      security exceptions* step in the `dependency-review` job — that one is live,
+      not commented out, so leaving it fails every PR once the Dependency graph
+      is on. Drop its `allow-ghsas` input too, and know that nothing then checks
+      the workflows.
 - [ ] `.github/dependabot.yml` — directories and ecosystems.
 - [ ] **Dependabot alerts + Dependency graph.** Enabling alerts switches the
       graph on as a side effect:
@@ -119,6 +132,40 @@ withdrawn.
 
 - [ ] Write `docs/decisions/004-<something>.md` for your first non-obvious
       choice. If you cannot think of one, do not invent one.
+
+## Agent-led setup
+
+For an agent doing this **with** a user rather than for them.
+
+1. **Interview before touching anything.** Stack and datastore; does it deploy;
+   does it publish artifacts; solo or a team with write access; public or
+   private. Those five answers decide every part below.
+2. **Drop parts with the script, not by hand** — `./scripts/setup.sh --drop a,b`.
+   It is the tested path: it prints the docs still referencing what you removed
+   and runs the repo's tests so a broken combination surfaces immediately.
+   Deleting files yourself skips both. Map answers to parts with `--list`; e.g.
+   no artifacts → `releases`, solo → `codeowners`, no deploy → `runbooks`.
+3. **Resolve the references the script prints.** It deliberately does not rewrite
+   prose. Docs describing a part you dropped are now wrong, which is the failure
+   this template has hit most often.
+4. **Fill the `TODO(template)` slots from the interview**, section by section,
+   confirming as you go. Ask rather than guess — a wrong rule in `AGENTS.md`
+   reads exactly like an earned one.
+5. **Apply the repo settings** — `./scripts/setup.sh --settings <owner>/<repo>`.
+   Report what it could not do; a `403` on branch protection is a choice for the
+   user to make, not something to work around.
+6. **Delete this file**, and remove the pointer to it from the top of
+   `AGENTS.md` — `AGENTS.md` itself stays; it is the repo's ongoing brief and the
+   only part of this template still doing work afterwards. Then push and confirm
+   **CI is green**. A placeholder failing at this point means step 4 is not
+   finished, not that setup is done.
+
+**Do not**, whatever the user's enthusiasm:
+
+- pre-fill `## Conventions` with rules nothing has earned — see *What NOT to do*;
+- write an ADR for a decision the code already states plainly;
+- add a CI job because it is good practice;
+- claim the repo enforces something you have not verified it enforces.
 
 ## What NOT to do
 

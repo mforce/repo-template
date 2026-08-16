@@ -23,12 +23,43 @@ application code.
 | [`docs/decisions/`](docs/decisions/) | ADRs — where a rule's rationale lives once the rule is one line in `AGENTS.md`. |
 | [`docs/runbooks/`](docs/runbooks/) | Operational procedures, each with a verification drill. |
 
+## Prerequisites
+
+**Node 18+**, for the template's own tooling — never for your application. Three
+files are node; `ci.yml` and `scripts/setup.sh` invoke them and need nothing else:
+
+| File | What it does | Why node |
+|---|---|---|
+| [`vuln-gate.mjs`](.github/scripts/vuln-gate.mjs) | Parses `npm audit` / `dotnet list package` JSON, applies the severity ladder and the dated exceptions, sets the exit code | It has to parse JSON and it must fail closed. Doing that in POSIX `sh` means hand-rolling a JSON parser in the one component everything else trusts |
+| [`vuln-gate.test.mjs`](.github/scripts/vuln-gate.test.mjs) | The gate's guards — every way it could pass while an advisory is present | Tests the above, so same runtime |
+| [`workflows.test.mjs`](.github/scripts/workflows.test.mjs) | Asserts every action is SHA-pinned and no workflow ships a step that can only fail | Same runtime, no extra dependency |
+
+`node --test` is the whole test framework — there is no `package.json`, no
+`node_modules`, and nothing to install.
+
+**It is free where it runs.** GitHub-hosted runners ship Node 20+, so `ci.yml`
+has no `setup-node` step. You need node locally only to run the guards yourself
+or to let `scripts/setup.sh` verify the parts you kept; the script says so and
+carries on without it.
+
+Everything else here — hooks, workflows, the setup script — is POSIX `sh`.
+
 ## Using it
 
+Click **Use this template** on GitHub, then in your new repo:
+
 ```bash
-git clone <this> my-new-project && cd my-new-project
-rm -rf .git && git init -b main
+./scripts/setup.sh                          # pick the parts you want
+./scripts/setup.sh --settings <owner>/<repo> # and apply the repo settings
 ```
+
+The script deletes the parts you drop, prints the docs that still reference them
+for you to resolve, and runs the template's own tests so a broken combination
+shows up now. `--list` shows the parts; skip it entirely if you want everything.
+
+Or ask a coding agent to set the repo up with you — `AGENTS.md` points it at the
+*Agent-led setup* section of the checklist, which has it drive the same script
+rather than deleting files by hand.
 
 Then work through [`TEMPLATE-SETUP.md`](TEMPLATE-SETUP.md) and delete it. Nothing
 here is load-bearing until you fill in the `TODO(template)` slots.

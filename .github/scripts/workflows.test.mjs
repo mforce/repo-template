@@ -33,14 +33,19 @@ const workflows = readdirSync(WORKFLOWS)
 test("every unimplemented placeholder is keyed to TEMPLATE-SETUP.md, not an unconditional red", () => {
   const placeholders = workflows.filter((w) => w.body.includes("not implemented"));
 
-  // Without this the guard passes vacuously the moment the marker is reworded:
-  // zero placeholders found, zero assertions run, green. Two is what exists
-  // today; a new one must be added here deliberately, not discovered by silence.
-  assert.ok(
-    placeholders.length >= 2,
-    `expected at least 2 placeholder workflows, found ${placeholders.length} ` +
-      `(${placeholders.map((p) => p.name).join(", ") || "none"}) — if the marker was ` +
-      `reworded, update this test rather than letting it check nothing`,
+  // No count floor. An adopter may legitimately drop a placeholder workflow, and
+  // asserting "at least 2" turned that into a red they could not act on — the
+  // second time a hardcoded floor did that here, so the method is what changed.
+  // Vacuity is caught by comparing two independently-derived sets instead: a
+  // workflow keyed to the checklist but no longer marked, or the reverse, means
+  // one of the two markers was reworded and the checks below stopped meaning
+  // anything. Both empty is consistent — every placeholder was filled in.
+  const keyed = workflows.filter((w) => w.body.includes("[ -f TEMPLATE-SETUP.md ]"));
+  assert.deepEqual(
+    placeholders.map((w) => w.name).sort(),
+    keyed.map((w) => w.name).sort(),
+    "the 'not implemented' marker and the TEMPLATE-SETUP.md key disagree about which " +
+      "workflows are placeholders — one of them was reworded, so these checks are vacuous",
   );
 
   for (const { name, body } of placeholders) {
@@ -69,13 +74,26 @@ test("every unimplemented placeholder is keyed to TEMPLATE-SETUP.md, not an unco
 // mutable tag means you review one thing and run another.
 test("third-party actions are pinned to a full commit SHA, not a mutable tag", () => {
   const offenders = [];
-  let checked = 0;
+  let seen = 0;     // every `uses:` key, however spaced
+  let parsed = 0;   // of those, ones carrying an @ref we could split
+  let checked = 0;  // of those, the third-party ones held to the SHA rule
 
   for (const { name, body } of workflows) {
     for (const line of body.split("\n")) {
-      const match = line.match(/^\s*(?:-\s*)?uses:\s*([^\s@]+)@([^\s#]+)\s*(.*)$/);
-      if (!match) continue;
+      // Tolerant on YAML spacing: `uses : x@v5` is valid and used to escape both
+      // this and the vacuity count, so a mutable tag passed the guard silently.
+      const key = line.match(/^\s*(?:-\s*)?uses\s*:\s*(\S.*?)\s*$/);
+      if (!key) continue;
+      seen++;
+      const value = key[1];
+      // Local actions and container refs carry no @ref and are not marketplace
+      // actions, so the SHA rule does not govern them. Counted as understood so
+      // the vacuity check below stays meaningful.
+      if (/^\.{1,2}\//.test(value) || value.startsWith("docker://")) { parsed++; continue; }
+      const match = value.match(/^([^\s@]+)@([^\s#]+)\s*(.*)$/);
+      if (!match) { offenders.push(`${name}: cannot parse \`uses: ${value}\``); continue; }
       const [, action, ref, trailer] = match;
+      parsed++;
       if (/^(actions|github)\//.test(action)) continue; // GitHub-owned namespaces
       checked++;
       if (!/^[0-9a-f]{40}$/.test(ref)) offenders.push(`${name}: ${action}@${ref} is not a full SHA`);
@@ -84,8 +102,104 @@ test("third-party actions are pinned to a full commit SHA, not a mutable tag", (
     }
   }
 
-  // Same vacuity trap as above: if the `uses:` regex ever stops matching, this
-  // test would pass having examined nothing.
-  assert.ok(checked > 0, "found no third-party `uses:` lines to check — the matcher is broken");
+  // A repo with no third-party actions at all is a legitimate state — an adopter
+  // who drops the release workflow reaches it, and this used to fail there, which
+  // is a red nobody can act on. So distinguish the two cases: no third-party
+  // `uses:` anywhere is fine, but `uses:` lines existing while none of them parse
+  // means the matcher broke and every assertion below is vacuous.
+  // The vacuity risk is the MATCHER breaking, not the repo having no third-party
+  // actions. Those are different: an adopter who drops the release workflow has
+  // only `actions/*` left, which is a legitimate state that must stay green.
+  // Compare raw `uses:` lines against ones the regex understood.
+  assert.ok(
+    seen === 0 || parsed > 0,
+    `${seen} \`uses:\` keys exist but none carried a parsable @ref — this check is vacuous`,
+  );
   assert.deepEqual(offenders, []);
+});
+
+// INDEPENDENT OF BOTH MARKERS, deliberately. The check above compares two sets
+// derived from the same file, so it sees the markers diverge from each other but
+// not a workflow leaving the set — delete both at once and a bare `exit 1` walks
+// straight through. That is the state the header calls the worst version, so it
+// needs a detector that reads neither marker.
+//
+// "Bare failure" = a run block that, ignoring comments and `set -*`, does
+// nothing but print and exit non-zero. A real build step runs something; an
+// `exit 1` inside one is error handling and is not flagged.
+//
+// LIMIT, stated rather than implied: the per-line test is shell-shaped, not a
+// shell parser. `echo exit 1`, `exit $X` and an exit inside a loop are judged by
+// line shape alone. It catches the placeholder people
+// actually write; it is not a proof that no step can only fail.
+// Every `run:` script this guard is willing to reason about.
+//
+// LITERAL BLOCKS AND INLINE SCALARS ONLY. Folded `run: >` is skipped on purpose.
+// Folding joins lines with spaces inside a paragraph and with newlines across
+// blank ones, and it happens BEFORE the shell sees anything — so `# comment` on
+// one line and `exit 1` on the next fold into a single comment that never runs.
+// Reproducing that faithfully needs a YAML parser and a shell parser inside a
+// guard, and two attempts to approximate it produced a false red on a valid
+// workflow. Literal blocks and inline scalars are line-faithful: what the file
+// shows is what the shell gets.
+//
+// The gap is real and narrow — a placeholder written as a folded scalar is not
+// detected. Being right about less beats being wrong about more.
+// → docs/decisions/001-writing-a-guard.md
+function runScripts(body) {
+  const found = [];
+  const lines = body.replace(/\r\n/g, "\n").split("\n");
+  const indentOf = (l) => l.length - l.replace(/^[ \t]*/, "").length;
+
+  for (let i = 0; i < lines.length; i++) {
+    // Inline: `run: exit 1`. One command, nothing to fold.
+    const inline = lines[i].match(
+      /^[ \t]*(?:-[ \t]+)?run[ \t]*:[ \t]*([^|>\s#][^#]*?)[ \t]*(?:#.*)?$/,
+    );
+    if (inline) { found.push([inline[1]]); continue; }
+
+    const key = lines[i].match(
+      /^([ \t]*)((?:-[ \t]+)?)run[ \t]*:[ \t]*([|>])(?:[+-]?\d*|\d*[+-]?)[ \t]*(?:#.*)?$/,
+    );
+    if (!key || key[3] === ">") continue; // folded — see above
+    const keyIndent = key[1].length + key[2].length;
+
+    const collected = [];
+    for (let j = i + 1; j < lines.length; j++) {
+      const line = lines[j];
+      if (line.trim() === "") { collected.push(""); continue; }
+      if (indentOf(line) <= keyIndent) break;
+      collected.push(line);
+    }
+    if (collected.length) found.push(collected);
+  }
+  return found;
+}
+
+
+test("no workflow ships a step that can only fail", () => {
+  const bare = [];
+  for (const { name, body } of workflows) {
+    for (const raw of runScripts(body)) {
+      const lines = raw
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith("#") && !/^set\s/.test(l));
+      if (!lines.length) continue;
+      const fails = lines.some((l) => /^exit\s+[1-9]/.test(l));
+      const onlyTalks = lines.every((l) => /^(echo|printf)\b/.test(l) || /^exit\s+\d/.test(l));
+      // Exempt on the actual guard, not a substring: `block.includes` fired from
+      // a comment, so `# see TEMPLATE-SETUP.md` above a bare `exit 1` muted this
+      // entirely. `lines` already has comments stripped.
+      const keyed = lines.some((l) => l.includes("[ -f TEMPLATE-SETUP.md ]"));
+      if (fails && onlyTalks && !keyed) {
+        bare.push(`${name}: ${lines.join(" ; ").slice(0, 90)}`);
+      }
+    }
+  }
+  assert.deepEqual(
+    bare,
+    [],
+    "these steps do nothing but fail, and are not keyed to TEMPLATE-SETUP.md — an " +
+      "unconditional red with no action attached",
+  );
 });

@@ -115,16 +115,17 @@ test("release automation stays idle while the package name is the template place
     "release-please-config.json has no package-name for the root package",
   );
 
-  // The match branch must be the idle one. Pinning the two together means a
-  // swap of the branches fails here rather than shipping an inverted gate.
+  // Which branch does what, not just which strings appear. A swap of the two
+  // assignments, or an inverted grep, keeps every literal and ships a gate that
+  // is either always open or never open.
   const gate = workflow.body.match(
-    /if grep -q '([^']*)' release-please-config\.json; then\n\s*echo "named=false"/,
+    /if ! grep -q '([^']*)' release-please-config\.json; then\n\s*echo "named=true"[\s\S]{0,120}?\n\s*elif \[ -f TEMPLATE-SETUP\.md \]; then\n\s*echo "named=false"/,
   );
   assert.ok(
     gate,
-    "release-please.yml must gate on `grep -q '<placeholder>' release-please-config.json` " +
-      "with the matching branch setting named=false — any other spelling either inverts the " +
-      "gate or stops testing the config at all, and both are silent",
+    "release-please.yml must decide in this order: a named package runs release-please, " +
+      "the placeholder plus TEMPLATE-SETUP.md warns and stops, anything else fails. Any " +
+      "other spelling inverts the gate or drops a state, and both are silent",
   );
   assert.equal(
     gate[1],
@@ -133,11 +134,29 @@ test("release automation stays idle while the package name is the template place
       `package name is ${JSON.stringify(PLACEHOLDER)} — a gate that cannot match arms release ` +
       `automation on an un-set-up repo, which goes red on its first push to main`,
   );
+
+  // The third state is the one that earned this: a repo that deleted the
+  // checklist without naming the package has declared itself set up, and a gate
+  // that stays quiet there disables releases for good with a green tick over it.
   assert.match(
     workflow.body,
-    /::notice title=[^:]*idle/,
-    "release-please.yml must say why it did nothing; a silent skip reads as a working release",
+    /else\n\s*echo "::error title=[^:]*not implemented[\s\S]{0,600}?\n\s*exit 1\n/,
+    "release-please.yml must fail once TEMPLATE-SETUP.md is gone and the package is still " +
+      "unnamed — silently skipping there is a release pipeline nobody knows is off",
   );
+
+  // Both files the gate reads have to be IN the checkout. A sparse checkout that
+  // omits one makes `[ -f ]` false everywhere and the test above cannot see it:
+  // the workflow reads correctly and behaves as if the file never exists.
+  const sparse = workflow.body.match(/sparse-checkout: \|\n([\s\S]*?)\n\s*sparse-checkout-cone-mode/);
+  assert.ok(sparse, "release-please.yml must list its sparse-checkout paths in a block scalar");
+  for (const file of ["release-please-config.json", "TEMPLATE-SETUP.md"]) {
+    assert.ok(
+      sparse[1].split("\n").some((l) => l.trim() === file),
+      `${file} is read by the gate but not in the sparse-checkout — it will be missing at ` +
+        `runtime, and the gate reads a repo that does not contain it`,
+    );
+  }
 });
 
 // Every third-party action is pinned to a full 40-hex commit SHA with a trailing

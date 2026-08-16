@@ -61,8 +61,10 @@ withdrawn.
       `extra-files` if a version string is embedded anywhere. Keep `package-name`
       free of `:` — release-please derives its release-PR branch from it, and an
       invalid ref stops the release PR being created. **Naming the package is
-      what switches release automation on**: until then the workflow reports
-      idle and stops, so a fresh clone is not red on its first push to `main`.
+      what switches release automation on.** Until then the workflow warns and
+      stops — and, like `ci.yml`'s placeholder, **fails once you delete this
+      file**, so a fresh clone is not red while a repo claiming to be set up
+      cannot ship a release pipeline that silently never runs.
 - [ ] Decide the pre-1.0 policy. The shipped config damps `feat!:` to **minor**
       and everything else to **patch**, and that mapping **flips silently at
       1.0.0**. Get there deliberately with a `Release-As: 1.0.0` footer.

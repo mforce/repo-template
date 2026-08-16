@@ -51,20 +51,27 @@ jobs:
       - name: Read the release config
         uses: actions/checkout@v7
         with:
-          sparse-checkout: release-please-config.json
+          # Both files the step below reads. Omitting one makes its `[ -f ]` test
+          # false at runtime with nothing to see locally.
+          sparse-checkout: |
+            release-please-config.json
+            TEMPLATE-SETUP.md
           sparse-checkout-cone-mode: false
 
-      # The literal below is pinned to the config by workflows.test.mjs, so
-      # rewording one side cannot quietly turn this gate off.
+      # Three states, and workflows.test.mjs pins which branch does what — the
+      # literals alone can all survive a gate that is inverted or missing a case.
       - name: Is the package named yet?
         id: named
         run: |
           set -eu
-          if grep -q 'TODO-template-package-name' release-please-config.json; then
-            echo "named=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Release automation is idle::release-please-config.json still holds the template's placeholder package name, so no release PR was opened. Name the package (TEMPLATE-SETUP.md section 3) to switch this on, and set up the token first or the next run fails on PR creation."
-          else
+          if ! grep -q 'TODO-template-package-name' release-please-config.json; then
             echo "named=true" >> "$GITHUB_OUTPUT"
+          elif [ -f TEMPLATE-SETUP.md ]; then
+            echo "named=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Release automation not implemented::release-please-config.json still holds the template's placeholder package name, so no release PR was opened. Name the package (TEMPLATE-SETUP.md section 3) to switch this on, and set the token up first or the next run fails on PR creation."
+          else
+            echo "::error title=Release automation not implemented::TEMPLATE-SETUP.md is gone, so this repo claims to be set up, but release-please-config.json still holds the template's placeholder package name. Name the package, or drop the release part with scripts/setup.sh."
+            exit 1
           fi
 
       - name: Mint a GitHub App token

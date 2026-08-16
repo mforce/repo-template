@@ -144,11 +144,18 @@ but zero approving reviews, a single account can merge a change to any file in
 [`.github/CODEOWNERS`](../../.github/CODEOWNERS) is the closest the repo itself
 gets to a lever on this: with branch protection's *"Require review from Code
 Owners"* ticked, a `.github/` change cannot merge with nobody having looked. It
-is **not** a control on its own — an owner approving their own change is no
-review, and the file ships inert because a CODEOWNERS entry naming an
-unresolvable user is silently ignored by GitHub, which is precisely the "reads as
-safety, checks nothing" shape of
+is **not** a control on its own, and the file ships inert because a CODEOWNERS
+entry naming an unresolvable user is silently ignored by GitHub — precisely the
+"reads as safety, checks nothing" shape of
 [`001-writing-a-guard.md`](001-writing-a-guard.md).
+
+On a **single-maintainer repo it cannot be a control at all.** GitHub does not
+let anyone approve their own pull request, so a solo CODEOWNERS with "Require
+review from Code Owners" enabled leaves every PR needing an approval nobody can
+give: either nothing merges, or an admin bypass stays on and the requirement is
+decorative. The gap this section describes is therefore **open by construction**
+until a second person has write access — no repo setting closes it, and no plan
+upgrade does either.
 
 **Branch protection and review of changes to `main` remain the only real
 controls.** Nothing in the repo can substitute for them.

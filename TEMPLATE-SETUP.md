@@ -97,9 +97,19 @@ finds the ones you have not done.
       **"Require review from Code Owners"**. Both halves are needed: an entry
       that does not resolve is silently ignored by GitHub, and without the tick
       the file only suggests reviewers. Verify by opening a PR that touches
-      `.github/` and confirming the owner is auto-requested. **If the step above
-      403'd, this cannot be switched on** — leave CODEOWNERS commented out rather
-      than shipping a file that looks like a control and is not one.
+      `.github/` and confirming the owner is auto-requested.
+
+      **Leave it commented out in either of these cases**, which is most repos:
+
+      - the step above 403'd, so there is no tick to make;
+      - **you are the only owner.** Nobody can approve their own PR, so a solo
+        CODEOWNERS plus "Require review from Code Owners" means every PR you
+        open needs an approval that cannot exist — you either never merge, or
+        you keep an admin bypass and the requirement means nothing. Going public
+        does not fix this; **a second person with write access** does.
+
+      Shipping a file that looks like a control and is not one is the failure
+      here, not the missing control itself.
 - [ ] `.github/pull_request_template.md` — prune the checklist to the rules this
       repo actually enforces. A box nobody can fail teaches people to tick
       without reading.

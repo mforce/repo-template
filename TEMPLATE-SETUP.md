@@ -72,17 +72,34 @@ finds the ones you have not done.
 
 ## 5. Branch protection
 
+- [ ] **First, check you can have it at all.** Branch protection is not
+      available for a **private repo on the free plan** — the API answers
+      `403 Upgrade to GitHub Pro or make this repository public`. Confirm with:
+
+      ```bash
+      gh api repos/<owner>/<repo>/branches/main/protection
+      ```
+
+      If it 403s, pick one deliberately and **write down which**: make the repo
+      public, upgrade the plan, or accept that "do not commit to `main`" is a
+      convention with nothing enforcing it. The third is a legitimate choice for
+      a solo repo — but only if it is a choice. The failure is documenting
+      protection you do not have, which is why `AGENTS.md` states the rule as an
+      instruction rather than as a fact about the repo.
 - [ ] Protect `main`: require a PR, require the CI checks, disallow force-push.
 - [ ] Decide the review requirement. **Zero required approvals means a single
       account can merge a change to `.github/workflows/` and every gate in this
       repo trusts it.** Nothing inside the repo can close that; only branch
-      protection can.
+      protection can — and where protection is unavailable, nothing closes it at
+      all.
 - [ ] `.github/CODEOWNERS` — uncomment the rules and replace `@OWNER` with a real
       user or `@org/team` **with write access**, then tick branch protection's
       **"Require review from Code Owners"**. Both halves are needed: an entry
       that does not resolve is silently ignored by GitHub, and without the tick
       the file only suggests reviewers. Verify by opening a PR that touches
-      `.github/` and confirming the owner is auto-requested.
+      `.github/` and confirming the owner is auto-requested. **If the step above
+      403'd, this cannot be switched on** — leave CODEOWNERS commented out rather
+      than shipping a file that looks like a control and is not one.
 - [ ] `.github/pull_request_template.md` — prune the checklist to the rules this
       repo actually enforces. A box nobody can fail teaches people to tick
       without reading.

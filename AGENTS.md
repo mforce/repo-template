@@ -172,7 +172,12 @@ rebuild**.
 
 ## Git / PR workflow
 
-- **`main` is protected** — branch, push, open a PR; do not commit to `main`.
+- **Never commit to `main`** — branch, push, open a PR. Hold this as a rule
+  whether or not branch protection is switched on: GitHub does not offer
+  protection for a **private repo on the free plan** (the API answers `403
+  Upgrade to GitHub Pro or make this repository public`), so on many repos the
+  rule is the only thing enforcing it. Do not read a successful push to `main`
+  as permission.
 - Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`. PRs squash-merge.
 - Only commit or push when the human asks.
 - TODO(template) issue-tracker conventions: which tracker is authoritative,

@@ -152,3 +152,19 @@ safety, checks nothing" shape of
 
 **Branch protection and review of changes to `main` remain the only real
 controls.** Nothing in the repo can substitute for them.
+
+### And they are not always available
+
+GitHub does not offer branch protection for a **private repo on the free plan**;
+the API answers `403 Upgrade to GitHub Pro or make this repository public`. On
+such a repo *every* mitigation on this page reduces to convention: `main` accepts
+a direct push, CODEOWNERS cannot be required, and the CI gates only ever run on
+changes someone chose to route through a PR.
+
+That is a defensible position for a solo repo — the gates still catch honest
+mistakes, which is most of what they are for. It is **not** defensible to
+document it as protected. The rule therefore lives in `AGENTS.md` as an
+instruction ("never commit to `main`") rather than as a claim about the repo's
+configuration, and `TEMPLATE-SETUP.md` makes checking for the `403` the first
+item of the branch-protection step. An invariant nothing enforces has to be
+stated as something a person does, not as something that is true.

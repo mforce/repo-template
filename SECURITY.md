@@ -11,7 +11,7 @@ TODO(template:security-report-channel) pick one channel and delete the others:
   vulnerability. Preferred: it needs no shared mailbox and gives a private fork
   to develop the fix in. Requires the setting to be enabled once
   (Settings → Advanced Security → Private vulnerability reporting).
-- **Email** — TODO(template:security-report-channel) `security@example.test`.
+- **Email** — TODO(template:security-report-email) `security@example.test`.
 
 TODO(template:security-response-expectations) state what a reporter can expect: time to first response, time to
 a fix or a decision, and whether you credit reporters. Promise only what you will

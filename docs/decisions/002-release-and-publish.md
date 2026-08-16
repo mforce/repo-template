@@ -177,7 +177,7 @@ attestation leaves no artifact behind.
     name: Publish the commit image
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build-and-test, image]   # TODO(template:release-publish-gate) add EVERY release-gating job
+    needs: [build-and-test, image]   # TODO(template:release-publish-needs) add EVERY release-gating job
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read

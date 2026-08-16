@@ -35,9 +35,9 @@ nothing."
 ## Build / test / run
 
 ```bash
-TODO(template:agents-commands) build
-TODO(template:agents-commands) test          # note anything that needs Docker/network/a DB
-TODO(template:agents-commands) run locally
+TODO(template:agents-commands-build) build
+TODO(template:agents-commands-test) test          # note anything that needs Docker/network/a DB
+TODO(template:agents-commands-run) run locally
 ```
 
 TODO(template:agents-test-tiers) note any test tier that is deliberately excluded from the fast
@@ -49,15 +49,15 @@ path, and where it does run instead.
 > consequence of breaking it, and — once there is one — the incident that earned
 > it. Add them as you learn them.
 
-- **TODO(template:agents-conventions)** — e.g. error handling: exceptions vs a `Result` type, and
+- **TODO(template:agents-conventions-errors)** — e.g. error handling: exceptions vs a `Result` type, and
   which failures are "expected".
-- **TODO(template:agents-conventions)** — e.g. how a request is validated, and where.
-- **TODO(template:agents-conventions)** — e.g. what a new database migration must and must not do.
+- **TODO(template:agents-conventions-validation)** — e.g. how a request is validated, and where.
+- **TODO(template:agents-conventions-migrations)** — e.g. what a new database migration must and must not do.
 
 ## Secrets — never commit
 
-- TODO(template:agents-secrets) where real values live (env file, secret store, `user-secrets`).
-- TODO(template:agents-secrets) where placeholders live (`*.example`), and that they are
+- TODO(template:agents-secrets-real) where real values live (env file, secret store, `user-secrets`).
+- TODO(template:agents-secrets-examples) where placeholders live (`*.example`), and that they are
   placeholders — an example file must never carry a usable credential.
 - No hardcoded passwords or keys in source, **including tests**. Generate test
   credentials at runtime; secret scanners flag literals in test files too, and

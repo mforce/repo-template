@@ -4,7 +4,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "package-name": "TODO-template-package-name",
+      "package-name": "TODO(template:release-package-name)",
       "initial-version": "0.0.1",
 
       "bump-minor-pre-major": true,

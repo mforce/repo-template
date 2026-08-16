@@ -32,8 +32,10 @@ Two things the tags still cannot tell you:
 > `["actions"]` while this checklist named the file only for a repo setting. An
 > adopter could tick every box and still have CodeQL passing green on every PR
 > having never analysed a line of their application code. Tagging every slot
-> found **nine more** of the same shape in `AGENTS.md` alone — sections nobody
-> would have been told to fill in.
+> then found **ten more slots with no checklist item at all** — nine in
+> `AGENTS.md`, one in `CONTRIBUTING.md`. Re-derive it: every slug below appears
+> in exactly one item, and before this convention `AGENTS.md` was named by a
+> single item covering four of its fifteen slots.
 
 ## 1. Identity
 
@@ -52,11 +54,13 @@ an agent treats a missing rule as "no rule", not as "ask someone".
       <!-- template:agents-layout --> <!-- template:agents-dependency-direction -->
 - [ ] `AGENTS.md` → `## Conventions` — leave empty until a rule is earned. See
       *What NOT to do* at the bottom; an empty section here is honest.
-      <!-- template:agents-conventions -->
+      <!-- template:agents-conventions-errors -->
+      <!-- template:agents-conventions-validation -->
+      <!-- template:agents-conventions-migrations -->
 - [ ] `AGENTS.md` → `## Secrets` — where real values live, and where the
       placeholder `*.example` files live. **Say that the examples are
       placeholders**, or someone will paste a working credential into one.
-      <!-- template:agents-secrets -->
+      <!-- template:agents-secrets-real --> <!-- template:agents-secrets-examples -->
 - [ ] `AGENTS.md` → `## Deployment boundary` — keep it if this repo deploys,
       delete the section if it does not. Leaving it in for a repo that never
       deploys trains readers to skip the section.
@@ -93,7 +97,7 @@ an agent treats a missing rule as "no rule", not as "ask someone".
 - [ ] `SECURITY.md` — pick a reporting channel and delete the others, set the
       supported-versions answer, and say what a reporter can expect back.
       Promise only what you will actually do.
-      <!-- template:security-report-channel -->
+      <!-- template:security-report-channel --> <!-- template:security-report-email -->
       <!-- template:security-response-expectations -->
       <!-- template:security-supported-versions -->
 - [ ] **Replace `LICENSE` with your project's.** The one shipped here is MIT and
@@ -111,7 +115,8 @@ an agent treats a missing rule as "no rule", not as "ask someone".
 
 - [ ] `AGENTS.md` → `## Build / test / run` — the actual commands, plus any
       test tier deliberately excluded from the fast path and where it does run.
-      <!-- template:agents-commands --> <!-- template:agents-test-tiers -->
+      <!-- template:agents-commands-build --> <!-- template:agents-commands-test -->
+      <!-- template:agents-commands-run --> <!-- template:agents-test-tiers -->
 - [ ] `.github/workflows/ci.yml` → the `build-and-test` job steps. The shipped
       placeholder **passes while this file exists and fails once you delete it**
       (step 7), so an un-set-up template is not permanently red and a set-up
@@ -138,15 +143,17 @@ an agent treats a missing rule as "no rule", not as "ask someone".
 - [ ] `.release-please-manifest.json` + `version.txt` — leave at the initial
       version. **Never hand-edit them afterwards**; release-please owns both, and
       a manual edit desynchronises it from the tags that exist.
-- [ ] `.github/workflows/release-please.yml` — set `bootstrap-sha` to your first
-      commit, or drop the key to have it scan all history.
+- [ ] `release-please-config.json` → `package-name`. It ships a marker so the
+      guard can see it; release-please would otherwise publish under a literal
+      placeholder name.
+      <!-- template:release-package-name -->
 - [ ] If you publish container images: read
       [`docs/decisions/002-release-and-publish.md`](docs/decisions/002-release-and-publish.md)
       and add the publish/promote jobs. The template ships the reasoning, not the
       jobs, because they are registry-specific. Record in `AGENTS.md` what is
       published per merge and that promotion is a **retag of the reviewed bytes,
       never a rebuild**.
-      <!-- template:release-publish-gate -->
+      <!-- template:release-publish-gate --> <!-- template:release-publish-needs -->
       <!-- template:agents-publish-promotion -->
 
 ## 4. Security gates

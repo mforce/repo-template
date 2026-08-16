@@ -39,16 +39,58 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      # CodeQL cannot upload results unless Code scanning is enabled — a one-time
+      # owner toggle (Settings → Advanced Security → Code scanning) with no API
+      # to flip it. Without this probe the job dies at the upload step with
+      # "Code scanning is not enabled for this repository", so a fresh repo is
+      # red on every PR for a reason that is not a code defect.
+      #
+      # Same shape as ci.yml's Dependency-graph probe, and deliberately the same
+      # posture: skip only on a DEFINITIVE not-enabled answer, warn loudly, and
+      # self-activate on the next run once the toggle is on. Anything else runs
+      # the analysis so a real error is surfaced rather than masked.
+      #
+      # The 403 is checked by MESSAGE, not status alone. A fork PR's restricted
+      # token also yields 403 here, and treating that as "not enabled" would
+      # silently skip analysis on exactly the PRs that most need it. Measured:
+      # a disabled repo returns 403 with "Code scanning is not enabled for this
+      # repository"; an enabled one returns 200.
+      - name: Check Code scanning is enabled
+        id: scanning
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          out="$(gh api "repos/$REPO/code-scanning/alerts?per_page=1" -i 2>/dev/null || true)"
+          code="$(printf '%s' "$out" | awk 'toupper($1) ~ /^HTTP/ {print $2; exit}')"
+          if [ "$code" = "200" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          elif printf '%s' "$out" | grep -qi 'code scanning is not enabled'; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=CodeQL inactive::Enable Code scanning at Settings → Advanced Security → Code scanning; this analysis activates automatically once it is on."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Code scanning probe inconclusive::alerts probe returned '${code:-no response}' without a not-enabled message; running CodeQL anyway so a real error is not masked."
+          fi
+
       - name: Initialize CodeQL
+        if: steps.scanning.outputs.available == 'true'
         uses: github/codeql-action/init@v4
         with:
-          language: ${{ matrix.language }}
+          # `languages`, plural — the singular spelling is silently ignored and
+          # the action then autodetects, which is not what the matrix says.
+          languages: ${{ matrix.language }}
 
       # TODO(template) compiled languages (csharp, java, go, c-cpp) need a build
       # between init and analyze. Add `github/codeql-action/autobuild@v4`, or an
-      # explicit build step when autobuild cannot work it out.
+      # explicit build step when autobuild cannot work it out — and carry the
+      # same `if: steps.scanning.outputs.available == 'true'` onto it, or the
+      # build runs on a skipped analysis and fails without an initialised
+      # CodeQL database.
 
       - name: Perform CodeQL analysis
+        if: steps.scanning.outputs.available == 'true'
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"

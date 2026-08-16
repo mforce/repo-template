@@ -19,6 +19,33 @@ gap opens: the tree gates and the diff gate answer different questions ("is our
 tree clean?" vs "does *this PR* make it worse?"), and only the diff gate names
 the offending dependency in the PR that introduced it.
 
+## A gate blocked on a repo setting warns; it does not fail
+
+Two of the four need a one-time owner toggle that no API can flip and no commit
+can supply: `dependency-review` needs **Dependency graph**, `codeql.yml` needs
+**Code scanning**. Left alone, both fail every PR on a fresh repo — for a reason
+that is not a defect in the change being reviewed.
+
+A red check nobody can fix from a branch is worse than a missing check, because
+it teaches everyone to merge past red, and that habit does not stay confined to
+the one check that earned it. So each probes for its setting, and:
+
+- **only a definitive not-enabled answer skips**, with a loud warning naming the
+  setting — so the gate self-activates on the next run once the toggle is on,
+  with nobody having to remember to re-enable it;
+- **anything else runs**, so a transient or unexpected failure surfaces as a real
+  error rather than silently disabling the gate.
+
+The CodeQL probe matches on the response **message**, not the status alone: a
+fork PR's restricted token returns `403` from the same endpoint, and treating
+that as "not enabled" would skip analysis on exactly the PRs that most need it.
+Both statuses were measured against a disabled and an enabled repo rather than
+assumed.
+
+The same reasoning drives the `build-and-test` placeholder, which passes while
+`TEMPLATE-SETUP.md` exists and fails once it is deleted — an un-set-up template
+is not permanently red, and a set-up repo cannot ship a vacuously green build.
+
 ## Why a script instead of the stock commands
 
 - `npm audit --audit-level=high` gates, but has **no allowlist**. One unfixable

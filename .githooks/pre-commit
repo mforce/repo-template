@@ -2,7 +2,8 @@
 # Pre-commit: fast checks for the stacks the commit touches.
 #
 # Enable once per clone:   git config core.hooksPath .githooks
-# Skip once:               git commit --no-verify   (or SKIP_HOOKS=1)
+# Skip:                    git commit --no-verify  (one commit)
+#                          SKIP_HOOKS=1             (while it is set)
 #
 # BUDGET: ~2 seconds. This is a tripwire, not a gate — CI is the authority and
 # runs the full suite on every PR. Anything needing Docker, a database, a

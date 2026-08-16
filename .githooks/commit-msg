@@ -2,7 +2,8 @@
 # commit-msg: keep a commit parseable by release-please.
 #
 # Enable once per clone:   git config core.hooksPath .githooks
-# Skip once:               git commit --no-verify   (or SKIP_HOOKS=1)
+# Skip:                    git commit --no-verify  (one commit)
+#                          SKIP_HOOKS=1             (while it is set)
 #
 # WHY THIS EXISTS. release-please runs @conventional-commits/parser over the
 # WHOLE message, subject and body. A parse error is caught, logged as "commit
@@ -110,7 +111,7 @@ esac
 
 # --- 2. No body line that lexes as a nested type(scope) header. --------------
 # Trigger: a line starting at column 1 with non-whitespace, non-paren characters,
-# then '(', then another '(' before the closing ')'. Ordinary code prose:
+# then '(', then another '(' BEFORE THE FIRST ')'. Ordinary code prose:
 #   Assert.Single(AllMigrations())   <- breaks
 #   f(g(h))  a(())  a.b(c(d))        <- breaks
 # Defused by any of: leading whitespace (space OR TAB — the class must exclude

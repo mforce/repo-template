@@ -62,13 +62,27 @@ finds the ones you have not done.
 - [ ] `.github/scripts/vuln-gate.mjs` — if your ecosystem is not npm or NuGet,
       add a parser (see the `PARSERS` map and the comment above it).
 - [ ] `.github/dependabot.yml` — set the directories and ecosystems.
-- [ ] Repo settings → **Advanced Security → Dependency graph: on**. The
-      `dependency-review` job self-activates once it is; until then it warns on
-      every PR rather than passing silently.
-- [ ] Repo settings → **Advanced Security → Code scanning: on**. `codeql.yml`
-      behaves the same way — it skips with a warning until the toggle is on,
-      rather than failing the run for a setting no code change can fix.
-- [ ] Repo settings → **Dependabot alerts: on**.
+- [ ] **Dependabot alerts + Dependency graph.** One call does both — enabling
+      alerts switches the graph on as a side effect:
+
+      ```bash
+      gh api -X PUT repos/<owner>/<repo>/vulnerability-alerts
+      gh api repos/<owner>/<repo>/dependency-graph/sbom --silent -i | head -1   # want: 200
+      ```
+
+      The `dependency-review` job self-activates on the next run once the probe
+      returns 200; until then it warns on every PR rather than passing silently.
+      (`automated-security-fixes` is a separate choice — it opens fix PRs and has
+      no bearing on the graph.)
+- [ ] **Code scanning**, for `codeql.yml`. A **public** repo needs nothing here.
+      A private repo needs GitHub Advanced Security; until then the job skips
+      with a warning rather than failing the run for a setting no code change can
+      fix. Do **not** reach for
+      `PUT /repos/<owner>/<repo>/code-scanning/default-setup` — default setup
+      conflicts with the advanced workflow this template ships and rejects its
+      SARIF. If a repo already has default setup on, switch it to advanced
+      (Settings → Code security → Code scanning → CodeQL → `…` → Switch to
+      advanced) instead of running both.
 
 ## 5. Branch protection
 
@@ -97,9 +111,19 @@ finds the ones you have not done.
       **"Require review from Code Owners"**. Both halves are needed: an entry
       that does not resolve is silently ignored by GitHub, and without the tick
       the file only suggests reviewers. Verify by opening a PR that touches
-      `.github/` and confirming the owner is auto-requested. **If the step above
-      403'd, this cannot be switched on** — leave CODEOWNERS commented out rather
-      than shipping a file that looks like a control and is not one.
+      `.github/` and confirming the owner is auto-requested.
+
+      **Leave it commented out in either of these cases**, which is most repos:
+
+      - the step above 403'd, so there is no tick to make;
+      - **you are the only owner.** Nobody can approve their own PR, so a solo
+        CODEOWNERS plus "Require review from Code Owners" means every PR you
+        open needs an approval that cannot exist — you either never merge, or
+        you keep an admin bypass and the requirement means nothing. Going public
+        does not fix this; **a second person with write access** does.
+
+      Shipping a file that looks like a control and is not one is the failure
+      here, not the missing control itself.
 - [ ] `.github/pull_request_template.md` — prune the checklist to the rules this
       repo actually enforces. A box nobody can fail teaches people to tick
       without reading.

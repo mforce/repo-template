@@ -21,10 +21,25 @@ the offending dependency in the PR that introduced it.
 
 ## A gate blocked on a repo setting warns; it does not fail
 
-Two of the four need a one-time owner toggle that no API can flip and no commit
-can supply: `dependency-review` needs **Dependency graph**, `codeql.yml` needs
-**Code scanning**. Left alone, both fail every PR on a fresh repo — for a reason
-that is not a defect in the change being reviewed.
+Two of the four need a one-time repo-level setting that no commit can supply:
+`dependency-review` needs **Dependency graph**, `codeql.yml` needs **Code
+scanning**. Left alone, both fail every PR on a fresh repo — for a reason that is
+not a defect in the change being reviewed.
+
+Neither is reachable from a workflow, but "no API can flip it" — which this
+section used to say — is wrong for the first one, and it sent readers to the web
+UI unnecessarily. Measured on this repo:
+
+- **Dependency graph** is switched on as a side effect of enabling Dependabot
+  alerts: `PUT /repos/{owner}/{repo}/vulnerability-alerts`. Isolated by
+  toggling each candidate separately and re-probing
+  `/dependency-graph/sbom` — 404 with alerts off, 200 with them on, and
+  `automated-security-fixes` makes no difference either way.
+- **Code scanning** needed no toggle at all once the repo was **public**; the
+  skip warning stopped on the next run with
+  `/code-scanning/default-setup` still reporting `not-configured`. Enabling
+  default setup through its API is *not* the fix — it conflicts with an advanced
+  workflow and rejects its SARIF.
 
 A red check nobody can fix from a branch is worse than a missing check, because
 it teaches everyone to merge past red, and that habit does not stay confined to
@@ -144,11 +159,18 @@ but zero approving reviews, a single account can merge a change to any file in
 [`.github/CODEOWNERS`](../../.github/CODEOWNERS) is the closest the repo itself
 gets to a lever on this: with branch protection's *"Require review from Code
 Owners"* ticked, a `.github/` change cannot merge with nobody having looked. It
-is **not** a control on its own — an owner approving their own change is no
-review, and the file ships inert because a CODEOWNERS entry naming an
-unresolvable user is silently ignored by GitHub, which is precisely the "reads as
-safety, checks nothing" shape of
+is **not** a control on its own, and the file ships inert because a CODEOWNERS
+entry naming an unresolvable user is silently ignored by GitHub — precisely the
+"reads as safety, checks nothing" shape of
 [`001-writing-a-guard.md`](001-writing-a-guard.md).
+
+On a **single-maintainer repo it cannot be a control at all.** GitHub does not
+let anyone approve their own pull request, so a solo CODEOWNERS with "Require
+review from Code Owners" enabled leaves every PR needing an approval nobody can
+give: either nothing merges, or an admin bypass stays on and the requirement is
+decorative. The gap this section describes is therefore **open by construction**
+until a second person has write access — no repo setting closes it, and no plan
+upgrade does either.
 
 **Branch protection and review of changes to `main` remain the only real
 controls.** Nothing in the repo can substitute for them.

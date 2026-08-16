@@ -5,6 +5,10 @@ TODO(template) one line: what this is, the stack, the datastore.
 Shared brief for any coding agent. `CLAUDE.md` is a one-line include, so there is
 exactly one copy.
 
+> **If `TEMPLATE-SETUP.md` still exists, this repo is not set up yet.** Read its
+> *Agent-led setup* section before anything else — most rules below are
+> unfilled placeholders until then.
+
 > **Maintaining this file.** Every bullet should be a rule someone needed. Add
 > the rule **and cite the incident** — the citation is what stops a later reader
 > deleting it as obvious. Keep it to the rule plus its one-line consequence; the
@@ -100,6 +104,10 @@ shell. Both **warn and continue when not installed**, so "the hook is enabled"
 does not mean "the workflows are linted".
 
 ## CI security gates
+
+The gate and the guards in `.github/scripts/` are Node 18+ — tooling only, not a
+claim on the application's stack. Runners ship it; nothing installs it.
+
 
 CI fails a PR when a **production** dependency carries a known **high+** advisory.
 Both audit gates run through

@@ -3,8 +3,10 @@
 > **Rule** — the one-paragraph version lives in [`AGENTS.md`](../../AGENTS.md).
 >
 > **Provenance:** inherited with the repo template. The workflow shipped here
-> covers only the version/changelog half; the publish half is described but not
-> implemented, because it is registry-specific.
+> covers only the version/changelog half; the publish half is registry-specific,
+> so it ships as reasoning (below) plus a copy-paste OCI/GHCR reference
+> implementation ("Reference implementation — OCI images on GHCR"), not as a live
+> workflow.
 
 ## Two stages, deliberately separate
 
@@ -93,3 +95,214 @@ release note" is a review rule and not a hook.
 `.release-please-manifest.json` and `version.txt` are owned by release-please.
 A manual edit desynchronises it from the tags that actually exist, after which it
 either re-proposes a version that is already released or skips one.
+
+## Reference implementation — OCI images on GHCR
+
+The invariants above are registry-agnostic; this is one concrete wiring of them
+for OCI images pushed to GHCR, proven in a real repo. Copy the jobs, then fill
+the `TODO(template)` markers. Everything registry-specific is a `vars`/`secrets`
+lookup, so the same jobs target Gitea/Harbor by setting `REGISTRY`, `IMAGE_NAME`,
+`REGISTRY_USER`, `REGISTRY_TOKEN` — no YAML change.
+
+Add to the top of **both** `ci.yml` and `release-please.yml`:
+
+```yaml
+env:
+  REGISTRY: ${{ vars.REGISTRY || 'ghcr.io' }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME || github.repository }}
+```
+
+### 1. `ci.yml` — build, scan, and export the image (app-specific)
+
+The build + scan + boot-smoke half is where your stack shows through, so it stays
+a `TODO(template)`. The contract it must satisfy for the publish job below:
+
+- Build the runtime image to a local tag (e.g. `app:ci`) with a
+  `docker-container` buildx driver and `--load` so the scanner sees the freshly
+  built bytes, not a re-pull.
+- **Scan it** (Trivy `severity: HIGH,CRITICAL`, `ignore-unfixed: true`,
+  `exit-code: 1`) and **boot it** — prove it starts and serves, not just that it
+  builds. A green scan on an unbootable image is a false pass.
+- Only on a merge to `main` (or a repair dispatch), `docker save | gzip` the
+  image to an artifact named `runtime-image`, and expose the local image Id as a
+  job output so the publish job can prove the handoff carried the scanned bytes:
+
+```yaml
+    outputs:
+      image_id: ${{ steps.export.outputs.image_id }}
+    # …after build + scan + smoke test…
+      - name: Export the verified image for publishing
+        id: export
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          docker save app:ci | gzip > image.tar.gz
+          printf 'image_id=%s\n' "$(docker image inspect -f '{{.Id}}' app:ci)" >> "$GITHUB_OUTPUT"
+      - name: Upload the verified image
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: runtime-image
+          path: image.tar.gz
+          compression-level: 0   # already gzipped
+          retention-days: 1      # intra-run handoff; the registry is the durable copy
+```
+
+### 2. `ci.yml` — publish the commit image (generic)
+
+Gated on **every** job that should gate a release — that `needs` list is exactly
+what the digest artifact proves downstream (invariant above). Publishes
+`:sha-<commit>`, then **attests the digest before recording it**, so a failed
+attestation leaves no artifact behind.
+
+```yaml
+  publish:
+    name: Publish the commit image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-and-test, image]   # TODO(template) add EVERY release-gating job
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write      # push to GHCR
+      id-token: write      # OIDC token for the provenance signer
+      attestations: write  # record the attestation
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+      digest: ${{ steps.publish.outputs.digest }}
+    steps:
+      # A dispatch names its own commit; a push is its own. Either way the commit
+      # must ALREADY be on main's history, or this would publish arbitrary branch
+      # content under a :sha- name the release workflow will promote.
+      - name: Resolve and authorise the commit to publish
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          sha="${INPUT_SHA:-$GITHUB_SHA}"
+          if ! printf '%s' "$sha" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::'${sha:-(empty)}' is not a full commit sha"; exit 1
+          fi
+          status="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$sha" --jq '.status')"
+          case "$status" in
+            identical|behind) ;;
+            *) echo "::error::$sha is not an ancestor of main ($status) — refusing"; exit 1 ;;
+          esac
+          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Download the verified image
+        uses: actions/download-artifact@v8
+        with:
+          name: runtime-image
+
+      # Assert the loaded bytes are the SCANNED bytes, by local image Id.
+      - name: Load and verify the image
+        env:
+          EXPECTED_ID: ${{ needs.image.outputs.image_id }}
+        run: |
+          set -euo pipefail
+          gunzip -c image.tar.gz | docker load
+          loaded="$(docker image inspect -f '{{.Id}}' app:ci)"
+          if [ -z "$EXPECTED_ID" ] || [ "$loaded" != "$EXPECTED_ID" ]; then
+            echo "::error::loaded image ${loaded} is not the scanned image ${EXPECTED_ID:-(unset)}"; exit 1
+          fi
+
+      - name: Log in to ${{ env.REGISTRY }}
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER || 'x-access-token' }}
+          password: ${{ secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Publish the commit image
+        id: publish
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          image="$(printf '%s/%s' "$REGISTRY" "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')"
+          docker tag app:ci "$image:sha-$SHA"
+          docker push "$image:sha-$SHA"
+          # The MANIFEST digest exists only once the image is in a registry
+          # (RepoDigests is empty before the push); it differs from the local Id.
+          digest="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image:sha-$SHA" \
+            | grep -F "$image@" | grep -oE 'sha256:[0-9a-f]{64}' | head -1 || true)"
+          if [ -z "$digest" ]; then
+            echo "::error::no manifest digest after push"; exit 1
+          fi
+          printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$digest" > published-digest.txt
+
+      # BEFORE the digest artifact, so a failed attestation leaves nothing behind.
+      - name: Attest the published image's build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ steps.publish.outputs.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true   # store as an OCI referrer, for --bundle-from-oci
+
+      # Named by COMMIT, not run: a repair dispatch reports the branch tip as
+      # head_sha, so a run-keyed lookup would miss exactly the repair case.
+      - name: Record the published digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: published-digest-${{ steps.target.outputs.sha }}
+          path: published-digest.txt
+          retention-days: 90
+```
+
+The `workflow_dispatch` input (`sha`) that the repair path reads:
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit on main to build and publish (repair a skipped run)"
+        required: true
+        type: string
+```
+
+### 3. `release-please.yml` — promote the verified digest
+
+Replace the template's single `release-please` job with **cut / promote / groom**.
+`promote` reads the digest from CI's artifact (never the mutable tag), verifies
+its attestation, then server-side retags. `groom` exists because a release stays
+a **draft until promoted** and GitHub withholds the tag for a draft — so a single
+release-please pass would compute the next PR at the one moment the new version
+has no tag and restate every prior changelog. Split the passes:
+
+```yaml
+jobs:
+  release-please:      # skip-github-pull-request: true  → cut only
+  promote:             # needs: release-please; reads published-digest-<sha>,
+                       # verifies attestation, retags with
+                       # `docker buildx imagetools create --prefer-index=false`,
+                       # then `gh release edit --draft=false` (creates the tag)
+  groom:               # needs: [release-please, promote]; skip-github-release: true
+                       # guarded: refuse to groom while v<manifest> is a tagless draft
+```
+
+The load-bearing details, each of which has a wrong default:
+
+- **`--prefer-index=false`** on the retag — the default `true` wraps the manifest
+  in a new index with a different top-level digest, so the version tag would no
+  longer resolve to the scanned digest.
+- **Provenance verify with all three flags** — none is the default:
+  `--bundle-from-oci` (read the registry copy), `--signer-workflow` (bind to the
+  workflow path), `--source-ref refs/heads/main` (bind to the ref — so a repair
+  dispatch must run *from* main). Boundary in the section above.
+- **`gh buildx imagetools inspect --format '{{json .Manifest.Digest}}'`** to
+  confirm the retag — the non-`json` form is mis-detected by older buildx and
+  prints the whole manifest dump.
+- **`groom`'s draft guard needs push access** (an App token, not the job's
+  `contents: read` `GITHUB_TOKEN`) — GitHub returns draft releases only to a
+  caller with push, so probing with the ambient token lists none and the guard
+  silently never fires.
+
+A full worked copy of all three jobs lives at
+[mforce/collectify `.github/workflows/`](https://github.com/mforce/collectify/tree/main/.github/workflows)
+(`ci.yml` publish job, `release-please.yml` promote/groom).

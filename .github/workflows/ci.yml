@@ -52,7 +52,7 @@ jobs:
         run: |
           set -eu
           if [ -f TEMPLATE-SETUP.md ]; then
-            echo "::warning title=Build step not implemented::ci.yml still carries the template placeholder instead of a real build. It passes while TEMPLATE-SETUP.md exists; deleting that file (checklist step 7) makes this step fail until you replace it."
+            echo "::warning title=Build step not implemented::ci.yml still carries the template placeholder instead of a real build. It passes while TEMPLATE-SETUP.md exists; deleting that file (its opening instruction) makes this step fail until you replace it."
             exit 0
           fi
           echo "::error title=Build step not implemented::TEMPLATE-SETUP.md is gone, so this repo is set up — but ci.yml still carries the placeholder build step. Replace it with the real build and test commands."

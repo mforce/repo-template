@@ -40,7 +40,7 @@ const CHECKLIST = "TEMPLATE-SETUP.md";
 // convention. Matching loosely first is the point: a near-miss like a stray
 // space or an underscore is otherwise invisible to BOTH the slot scan and a
 // narrow ban, which is a real instruction in the tree that nothing reports.
-const ANY_MARKER = /TODO\(template[^)\n]*\)/g;
+const ANY_MARKER = /TODO\s*\(\s*template[^)\n]*\)/g;
 const WELL_FORMED = /^TODO\(template:[a-z0-9-]+\)$/;
 const PLACEHOLDER = "TODO(template:<slug>)";
 const SLOT = /TODO\(template:([a-z0-9-]+)\)/g;
@@ -68,16 +68,19 @@ const read = (path) => {
 
 const sources = tracked.filter((p) => p !== CHECKLIST).map((path) => ({ path, body: read(path) }));
 
-// THE CHECKLIST IS SUPPOSED TO BE DELETED. Step 7 tells the adopter to delete it
-// once setup is done, and an earlier version of this guard then failed forever
+// THE CHECKLIST IS SUPPOSED TO BE DELETED. Its opening instruction says to delete
+// it once setup is done, and an earlier version of this guard then failed forever
 // on their repo — a red nobody can fix from a branch, which is exactly what
 // docs/decisions/000 says teaches people to ignore red. It is also the second
 // time that shape shipped here; the first was security-audit.yml's weekly
 // `exit 1`.
 //
-// With the checklist gone there is simply nothing to match slots against, so
-// these checks skip. What still fails for a set-up repo is ci.yml's and
-// security-audit.yml's own placeholders, which are keyed to the same file.
+// With the checklist gone there is nothing to match slots against, so the
+// correspondence checks skip. They are replaced by a STRICTER one: a set-up repo
+// must have no slots left at all. Skipping outright was the over-correction —
+// it let a repo delete the checklist with every marker still in place and stay
+// green. The difference that matters is that this red IS fixable from a branch:
+// fill the slot in, or delete the marker.
 const setUp = !existsSync(join(ROOT, CHECKLIST));
 const skip = setUp
   ? `${CHECKLIST} is gone, so this repo is set up and there is no checklist to match slots against`
@@ -95,7 +98,21 @@ for (const { path, body } of sources) {
     }
   });
 }
-const items = new Set(matchAll(checklist, ITEM));
+const itemRefs = matchAll(checklist, ITEM); // order preserved, duplicates kept
+const items = new Set(itemRefs);
+
+// The mirror of the skip above, and the reason skipping the rest is safe. Runs
+// only once the checklist is gone.
+test("a set-up repo has no slots left over", { skip: setUp ? false : "the checklist is still here, so this repo is not set up yet" }, () => {
+  const left = [...slots.entries()].map(([slug, where]) => `${slug} (${where.join(", ")})`);
+  assert.deepEqual(
+    left,
+    [],
+    `${CHECKLIST} is gone, so this repo claims to be set up — but these slots are still ` +
+      `unfilled. Fill each one in and delete its marker, or delete the marker if the slot ` +
+      `does not apply`,
+  );
+});
 
 // Runs in both states: a file that cannot be read is a hole in every other
 // assertion here, and "" is indistinguishable from "no markers".
@@ -137,9 +154,18 @@ test("every checklist item points at a slot that still exists", { skip }, () => 
   );
 });
 
+// A slug pasted onto a second checklist item makes an unrelated instruction look
+// linked to a live slot, and comparing sets could not see it.
+test("no slug is referenced by more than one checklist item", { skip }, () => {
+  const counts = new Map();
+  for (const slug of itemRefs) counts.set(slug, (counts.get(slug) ?? 0) + 1);
+  const repeated = [...counts.entries()].filter(([, n]) => n > 1).map(([slug, n]) => `${slug} x${n}`);
+  assert.deepEqual(repeated, [], `${CHECKLIST} names these slugs more than once — each slot gets exactly one item`);
+});
+
 // One slug per marker, so deleting any single marker drops its slug and trips
-// the check above. Without this, a slug shared by three lines survives the
-// deletion of two of them.
+// the correspondence checks above. Without this, a slug shared by three lines
+// survives the deletion of two of them.
 test("no slug is used by more than one marker", { skip }, () => {
   const shared = [...slots.entries()]
     .filter(([, where]) => where.length > 1)

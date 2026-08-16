@@ -47,7 +47,7 @@ jobs:
         run: |
           set -eu
           if [ -f TEMPLATE-SETUP.md ]; then
-            echo "::warning title=Weekly audit not implemented::security-audit.yml still carries the template placeholder instead of the real audit steps. It passes while TEMPLATE-SETUP.md exists; deleting that file (checklist step 7) makes this step fail until you replace it."
+            echo "::warning title=Weekly audit not implemented::security-audit.yml still carries the template placeholder instead of the real audit steps. It passes while TEMPLATE-SETUP.md exists; deleting that file (its opening instruction) makes this step fail until you replace it."
             exit 0
           fi
           echo "::error title=Weekly audit not implemented::TEMPLATE-SETUP.md is gone, so this repo is set up — but security-audit.yml still carries the placeholder. Replace it with the same vuln-gate steps ci.yml runs."

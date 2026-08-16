@@ -119,7 +119,8 @@ an agent treats a missing rule as "no rule", not as "ask someone".
       <!-- template:agents-commands-run --> <!-- template:agents-test-tiers -->
 - [ ] `.github/workflows/ci.yml` → the `build-and-test` job steps. The shipped
       placeholder **passes while this file exists and fails once you delete it**
-      (step 7), so an un-set-up template is not permanently red and a set-up
+      (this file's opening instruction), so an un-set-up template is not permanently
+      red and a set-up
       repo cannot ship a vacuously green build job.
       <!-- template:ci-overview --> <!-- template:ci-build-and-test -->
 - [ ] `.githooks/pre-commit` → the per-stack blocks and their path filters.

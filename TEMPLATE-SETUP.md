@@ -144,10 +144,13 @@ an agent treats a missing rule as "no rule", not as "ask someone".
 - [ ] `.release-please-manifest.json` + `version.txt` — leave at the initial
       version. **Never hand-edit them afterwards**; release-please owns both, and
       a manual edit desynchronises it from the tags that exist.
-- [ ] `release-please-config.json` → `package-name`. It ships a marker so the
-      guard can see it; release-please would otherwise publish under a literal
-      placeholder name.
-      <!-- template:release-package-name -->
+- [ ] `release-please-config.json` → `package-name`. It deliberately does **not**
+      carry a `TODO(template:<slug>)` marker, and must not: release-please derives its
+      release-PR branch name from this value, and a marker's `:` makes a ref that
+      `git check-ref-format` rejects, so pushes to `main` stop being able to
+      create or update the release PR. Config values that leak into refs, paths
+      or URLs cannot hold markers — the guard cannot see them, and that is the
+      correct trade.
 - [ ] If you publish container images: read
       [`docs/decisions/002-release-and-publish.md`](docs/decisions/002-release-and-publish.md)
       and add the publish/promote jobs. The template ships the reasoning, not the

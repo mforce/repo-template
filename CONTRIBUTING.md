@@ -6,56 +6,45 @@
 git config core.hooksPath .githooks
 ```
 
-Enables a fast `pre-commit` (path-filtered checks) and a `commit-msg` check that
-keeps the message parseable by the release tooling. Both are skippable with
-`--no-verify` or `SKIP_HOOKS=1` — on purpose. A hook nobody can skip is a hook
-people route around.
+Enables `pre-commit` (fast, path-filtered) and `commit-msg`. Both are skippable
+with `--no-verify` or `SKIP_HOOKS=1`, on purpose — a hook nobody can skip gets
+routed around.
 
-Optional, and worth it if you touch workflows or shell:
-
-```bash
-# actionlint — https://github.com/rhysd/actionlint
-# shellcheck — https://www.shellcheck.net
-```
-
-`pre-commit` runs them on the files you changed and **warns instead of failing
-when they are missing**, so nothing breaks without them — you just do not get
-the check.
+Optional if you touch workflows or shell: install
+[`actionlint`](https://github.com/rhysd/actionlint) and
+[`shellcheck`](https://www.shellcheck.net). `pre-commit` **warns instead of
+failing** when they are missing, so you just do not get the check.
 
 ## Branches and PRs
 
-- Never commit to `main`. Branch, push, open a PR — whether or not branch
-  protection is actually switched on (a private repo on the free plan cannot
-  have it). A push to `main` succeeding does not mean it was allowed.
-- Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`.
-- PRs squash-merge.
+- Never commit to `main`, whether or not branch protection is switched on (a
+  private free-plan repo cannot have it). A push succeeding is not permission.
+- Branches: `feat/…`, `fix/…`, `chore/…`, `docs/…`. PRs squash-merge.
 - The PR body is prefilled from
-  [`.github/pull_request_template.md`](.github/pull_request_template.md). Delete
-  the checklist lines that do not apply rather than ticking them — a box nobody
-  can fail teaches people to tick without reading.
+  [`pull_request_template.md`](.github/pull_request_template.md). Delete lines
+  that do not apply rather than ticking them.
 
 ## Commit messages
 
-[Conventional Commits](https://www.conventionalcommits.org/). The type decides
-the version bump and the changelog section:
+[Conventional Commits](https://www.conventionalcommits.org/) — the type decides
+the bump and the changelog section:
 
 ```
-feat(scope): add a thing          → minor (or patch below 1.0.0)
+feat(scope): add a thing          → minor (patch below 1.0.0)
 fix(scope): stop doing a thing    → patch
 docs|chore|test|ci|build|style    → patch, hidden from the changelog
-feat!: ... / BREAKING CHANGE:     → major (damped to minor below 1.0.0)
+feat!: … / BREAKING CHANGE:       → major (minor below 1.0.0)
 ```
 
-Two traps, both of which produce a **green run with no release entry**:
+Two traps, both producing a **green run with no release entry**:
 
-1. **The PR title is the release note.** For a multi-commit PR, the squashed
-   subject comes from the PR title — which no local hook can see. A
-   non-conventional title silently costs the bump.
-2. **A body line that starts with `word(` and contains another `(` before the
-   closing `)` breaks the commit parser**, and a commit that fails to parse is
-   *dropped entirely* — no changelog entry, no bump, and the release workflow
-   still reports success. Indent the line, make it a list item, or put a word in
-   front of it:
+1. **The PR title is the release note.** On a multi-commit PR the squashed
+   subject comes from it, and no local hook can see it. A non-conventional title
+   silently costs the bump.
+2. **A body line starting with `word(` that contains another `(` before the
+   first `)`** breaks the parser, and an unparseable commit is *dropped
+   entirely*. (`foo(bar(baz))` breaks; `foo(bar)(baz)` is fine.) Indent it, make
+   it a list item, or put a word in front:
 
    ```
    Assert.Single(AllMigrations())      ← breaks the parser
@@ -68,23 +57,24 @@ Two traps, both of which produce a **green run with no release entry**:
 
 ## Tests
 
-TODO(template) state the expectation, e.g. "every change to `src/` ships with
-tests in the same PR", and which tiers run where.
+TODO(template) the expectation — e.g. "every change to `src/` ships with tests in
+the same PR" — and which tiers run where.
 
 ## Reviewing
 
-Treat these like a missing test and block on them:
+Block on these like a missing test:
 
-- a hardcoded credential, in application code **or** test code;
+- a hardcoded credential, in application **or** test code;
 - a hardcoded hosting-provider name in code, config, or a committed doc;
-- a third-party GitHub Action pinned to a tag rather than a full commit SHA;
-- a user-visible change with no matching documentation update.
+- a third-party Action pinned to a tag rather than a full commit SHA;
+- a user-visible change with no matching doc update.
 
 ## Dependencies
 
-- A package add or bump must commit the regenerated lock file **in the same
-  commit** — CI restores in locked mode and a stale lock fails the run.
-- A known-vulnerable production dependency fails CI. The only mute is a dated
-  entry in [`.github/security-exceptions.json`](.github/security-exceptions.json);
-  prefer, in order: bump the package → pin/override the patched transitive →
-  only then an exception, with the unblocking PR linked in the reason.
+- A package add or bump commits the regenerated lock file **in the same commit** —
+  CI restores in locked mode.
+- A known-vulnerable dependency fails CI, once the audit steps are filled in (the
+  template ships them commented out). The only mute is a dated
+  entry in [`security-exceptions.json`](.github/security-exceptions.json). Prefer,
+  in order: bump the package → pin the patched transitive → an exception, with
+  the unblocking PR linked in the reason.

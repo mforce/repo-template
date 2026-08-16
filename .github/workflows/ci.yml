@@ -44,15 +44,15 @@ jobs:
       # — including on the gates that mean something. A stub that always passes
       # is worse: a project can ship with a vacuously green build job.
       #
-      # So the stub is keyed to TEMPLATE-SETUP.md, whose final instruction is to
-      # delete it. While that file exists the repo is admittedly un-set-up and
+      # So the stub is keyed to TEMPLATE-SETUP.md, which tells the adopter to
+      # delete it once setup is done. While that file exists the repo is admittedly un-set-up and
       # this warns; once it is gone the repo claims to be set up, and an
       # unfilled build step is a real defect that fails the run.
       - name: Build and test
         run: |
           set -eu
           if [ -f TEMPLATE-SETUP.md ]; then
-            echo "::warning title=Build step not implemented::ci.yml still carries the template placeholder instead of a real build. It passes while TEMPLATE-SETUP.md exists; deleting that file (checklist step 7) makes this step fail until you replace it."
+            echo "::warning title=Build step not implemented::ci.yml still carries the template placeholder instead of a real build. It passes while TEMPLATE-SETUP.md exists; deleting that file, which TEMPLATE-SETUP.md tells you to do, makes this step fail until you replace it."
             exit 0
           fi
           echo "::error title=Build step not implemented::TEMPLATE-SETUP.md is gone, so this repo is set up — but ci.yml still carries the placeholder build step. Replace it with the real build and test commands."

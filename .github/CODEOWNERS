@@ -1,65 +1,27 @@
-# Code owners — required reviewers per path.
+# Required reviewers per path. Gitignore syntax; the LAST matching rule wins, so
+# put the narrowest rules last.
 #
-# WHY THIS FILE EXISTS
+# Covers the one gap CI cannot: a merge to `main` that rewrites the workflows
+# themselves. → docs/decisions/000-ci-security-gates.md
 #
-# `docs/decisions/000-ci-security-gates.md` ends by naming the one thing none of
-# the CI gates cover: a merge to `main` that changes the workflows themselves.
-# Once a modified `ci.yml` is the definition on `main`, every gate runs exactly
-# as that file now says, and any attestation it produces is genuinely valid.
+# SHIPPED INERT. An entry naming an unresolvable user is silently ignored by
+# GitHub, so a plausible-looking broken file is worse than an empty one.
 #
-# This file plus branch protection's **"Require review from Code Owners"** is the
-# closest thing the repo has to a lever on that. It is still not a control on its
-# own — an owner reviewing their own change is no review — but it removes the
-# case where a `.github/` change merges with nobody having looked.
+# TODO(template) To activate, all three are required:
+#   1. Replace @OWNER with a user or @org/team that has write access.
+#   2. Branch protection → tick "Require review from Code Owners".
+#   3. Open a PR touching .github/ and confirm the owner is auto-requested.
 #
-# SHIPPED INERT ON PURPOSE
-#
-# Every rule below is commented out. A CODEOWNERS entry naming a user or team
-# that cannot be resolved is **silently ignored by GitHub** — the file stays in
-# place, the branch-protection box stays ticked, and nothing is ever required.
-# That is the exact failure `docs/decisions/001-writing-a-guard.md` is about: a
-# guard that reads as safety while checking nothing. An obviously-empty file is
-# honest; a plausible-looking broken one is not.
-#
-# TODO(template) SET UP
-#
-#   1. Uncomment the rules and replace @OWNER with a real GitHub user or
-#      @org/team that has **write access** to this repo. Anything else resolves
-#      to nothing.
-#   2. Branch protection → Require a pull request → tick "Require review from
-#      Code Owners". Without that tick this file only suggests reviewers.
-#   3. Confirm it resolved: open a PR touching `.github/` and check that the
-#      owner is auto-requested. If nobody is requested, the entry is broken.
-#
-# TWO CASES WHERE STEP 2 IS IMPOSSIBLE, AND THIS FILE STAYS COMMENTED
-#
-#   a. No branch protection to tick. `gh api repos/<owner>/<repo>/branches/main/protection`
-#      answers 403 on a private repo on the free plan.
-#   b. YOU ARE THE ONLY OWNER. GitHub does not let anyone approve their own pull
-#      request. With a solo CODEOWNERS entry and "Require review from Code
-#      Owners" on, every PR you open needs an approval that nobody can give — so
-#      you either never merge, or you keep an admin bypass and the requirement
-#      means nothing. Neither is a control. This is the more common case, and it
-#      does not go away when the plan improves.
-#
-# In both, leaving the rules commented is the honest state: an activated-looking
-# CODEOWNERS with nothing behind it fails the same way an unresolvable owner
-# does. Uncomment when a second person with write access exists — that is the
-# event that makes this file mean something, not the repo going public.
-#
-# Syntax is gitignore-style; the LAST matching rule wins, so put the narrowest
-# rules last.
+# Leave it commented if you cannot do step 2 — no branch protection (403 on a
+# private free-plan repo), or you are the sole owner (nobody can approve their
+# own PR, so the requirement is either a deadlock or a bypass). A second person
+# with write access is what makes this file mean something.
 
-# Everything, as a fallback.
 # *                        @OWNER
 
-# The gates, and the things that decide what the gates mean. These are the paths
-# where a self-merge silently rewrites what every other check is asserting.
+# Paths where a self-merge rewrites what every other check asserts.
 # /.github/                @OWNER
 # /.githooks/              @OWNER
 # /CODEOWNERS              @OWNER
 # /.github/CODEOWNERS      @OWNER
-
-# The decision record. Changing the rationale without changing the mechanism —
-# or the reverse — is how the two drift apart.
 # /docs/decisions/         @OWNER

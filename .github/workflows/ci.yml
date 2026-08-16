@@ -1,6 +1,6 @@
 # CI — runs on every PR and every push to main.
 #
-# TODO(template) fill in the build-and-test job and delete the ecosystem blocks
+# TODO(template:ci-overview) fill in the build-and-test job and delete the ecosystem blocks
 # you do not use. Keep the job count low: every job is billed per run and read by
 # a human on every red. Add a job when something it would have caught actually
 # happens, not because it is good practice.
@@ -30,7 +30,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # TODO(template) toolchain setup, restore, build, test.
+      # TODO(template:ci-build-and-test) toolchain setup, restore, build, test.
       #
       # If your ecosystem has lock files, restore in LOCKED mode — a stale lock
       # must fail the run rather than silently resolving to different versions
@@ -64,7 +64,7 @@ jobs:
       # want, the parsed report does — and it is safe only because the gate
       # validates the report SHAPE before trusting an empty finding list.
       #
-      # TODO(template) enable the ecosystems you use; delete the rest.
+      # TODO(template:ci-audit-ecosystems) enable the ecosystems you use; delete the rest.
       #
       # - name: Audit npm production dependencies
       #   working-directory: web

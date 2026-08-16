@@ -21,7 +21,7 @@
 # guard that reads as safety while checking nothing. An obviously-empty file is
 # honest; a plausible-looking broken one is not.
 #
-# TODO(template) SET UP
+# TODO(template:codeowners-setup) SET UP
 #
 #   1. Uncomment the rules and replace @OWNER with a real GitHub user or
 #      @org/team that has **write access** to this repo. Anything else resolves

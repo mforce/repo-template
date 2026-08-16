@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO(template) the languages you actually ship. Note that
+        # TODO(template:codeql-languages) the languages you actually ship. Note that
         # `actions` scans your own workflow files — worth keeping whatever
         # else is here.
         language: ["actions"]
@@ -82,7 +82,7 @@ jobs:
           # the action then autodetects, which is not what the matrix says.
           languages: ${{ matrix.language }}
 
-      # TODO(template) compiled languages (csharp, java, go, c-cpp) need a build
+      # TODO(template:codeql-compiled-build) compiled languages (csharp, java, go, c-cpp) need a build
       # between init and analyze. Add `github/codeql-action/autobuild@v4`, or an
       # explicit build step when autobuild cannot work it out — and carry the
       # same `if: steps.scanning.outputs.available == 'true'` onto it, or the

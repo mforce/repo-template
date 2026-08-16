@@ -16,7 +16,7 @@
 *.sh          text eol=lf
 .githooks/*   text eol=lf
 
-# TODO(template) add your stack's binary and generated-file rules, e.g.
+# TODO(template:gitattributes-stack-rules) add your stack's binary and generated-file rules, e.g.
 #   *.png binary
 #   *.snap        -diff       # generated snapshots: skip them in diffs
 #   package-lock.json linguist-generated=true

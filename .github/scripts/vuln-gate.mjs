@@ -26,7 +26,7 @@
 //
 // Exit 0 = clean or fully excepted; exit 1 = blocking advisory; exit 2 = bad input.
 //
-// TODO(template) ADDING AN ECOSYSTEM. Append an entry to PARSERS below with:
+// TODO(template:vuln-gate-parser) ADDING AN ECOSYSTEM. Append an entry to PARSERS below with:
 //   parse(report) -> [{ id, package, severity, title, url }]
 //   shape(report) -> null when the document is a real run, else a string saying
 //                    why it is not. This is the fail-closed half: an auth/network

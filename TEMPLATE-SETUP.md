@@ -2,35 +2,95 @@
 
 Work through this after cloning, then **delete this file**.
 
-Most items correspond to a `TODO(template)` marker in the tree —
-`grep -rn 'TODO(template)' .` lists them. Two cautions, both earned:
+Every slot in the tree is tagged `TODO(template:<slug>)` and named by exactly one
+item below, which carries a matching `<!-- template:<slug> -->` comment. List
+what is left:
 
-- **The marker list is not the checklist.** Some items are *repo settings*
-  (branch protection, Dependabot alerts) that no marker can represent, and one
-  file can carry several markers while this file mentions it once. Finishing the
-  grep is not finishing the setup.
-- **Read every marker in a file you touch, not just the one you came for.**
-  `codeql.yml` shipped a `language:` matrix defaulting to `["actions"]` while
-  this checklist named the file only for a repo setting — an adopter could tick
-  everything and still have CodeQL passing green having never analysed their
-  application code. `.github/scripts/template.test.mjs` now catches the
-  file-level version of that mistake, and says plainly that it does **not** catch
-  the slot-level one.
+```bash
+grep -rn 'TODO(template:' .
+```
+
+`.github/scripts/template.test.mjs` enforces the correspondence **in both
+directions**: a slot with no item fails, and an item pointing at a slot that no
+longer exists fails. That is why the tags are worth the noise — the checklist's
+only value is being complete, and nothing but a guard keeps it that way.
+
+Two things the tags still cannot tell you:
+
+- **Some items are repo settings** — branch protection, Dependabot alerts, code
+  scanning — that no marker in the tree can represent. Finishing the grep is not
+  finishing the setup.
+- **A green guard means every slot is *mentioned*, not that you did it well.**
+  Ticking without reading is still ticking without reading.
+
+> **Why this exists.** `codeql.yml` shipped a `language:` matrix defaulting to
+> `["actions"]` while this checklist named the file only for a repo setting. An
+> adopter could tick every box and still have CodeQL passing green on every PR
+> having never analysed a line of their application code. Tagging every slot
+> found **nine more** of the same shape in `AGENTS.md` alone — sections nobody
+> would have been told to fill in.
 
 ## 1. Identity
 
-- [ ] `AGENTS.md` — project name, one-line description, stack, `## Layout` tree.
+`AGENTS.md` is the brief every coding agent reads, and it carries more slots than
+any other file — hence its own list. An unfilled section there is not cosmetic:
+an agent treats a missing rule as "no rule", not as "ask someone".
+
+- [ ] `AGENTS.md` — project name and the one-line description of what this is,
+      the stack, and the datastore.
+      <!-- template:agents-project-name --> <!-- template:agents-one-line -->
+- [ ] `AGENTS.md` → `## Communicating` — how you want responses written.
+      <!-- template:agents-communicating -->
+- [ ] `AGENTS.md` → `## Layout` — the directory tree, **and** the dependency
+      direction if the layout has one. An agent that does not know which way
+      dependencies point will happily invert them.
+      <!-- template:agents-layout --> <!-- template:agents-dependency-direction -->
+- [ ] `AGENTS.md` → `## Conventions` — leave empty until a rule is earned. See
+      *What NOT to do* at the bottom; an empty section here is honest.
+      <!-- template:agents-conventions -->
+- [ ] `AGENTS.md` → `## Secrets` — where real values live, and where the
+      placeholder `*.example` files live. **Say that the examples are
+      placeholders**, or someone will paste a working credential into one.
+      <!-- template:agents-secrets -->
+- [ ] `AGENTS.md` → `## Deployment boundary` — keep it if this repo deploys,
+      delete the section if it does not. Leaving it in for a repo that never
+      deploys trains readers to skip the section.
+      <!-- template:agents-deployment-boundary -->
+- [ ] `AGENTS.md` → the lock-file rule, if your ecosystem has lock files: a
+      package add or bump commits the regenerated lock file **in the same
+      commit**, or CI's locked-mode restore fails.
+      <!-- template:agents-lockfile-rule -->
+- [ ] `AGENTS.md` → `## Git / PR workflow` — the issue-tracker conventions and
+      the documentation-sync rule: which files must be updated in the same PR as
+      a user-visible change, and that a reviewer treats a missing doc update
+      like a missing test.
+      <!-- template:agents-issue-tracker --> <!-- template:agents-doc-sync -->
+- [ ] `AGENTS.md` → `## Project context` — what phase the project is in and
+      where the domain vocabulary is defined. This is what an agent reads to
+      decide whether something is "not built yet" or "deliberately absent";
+      without it, it will guess.
+      <!-- template:agents-project-context -->
 - [ ] `README.md` — replace this template's README with the project's.
 - [ ] `CONTRIBUTING.md` — repo URL, branch prefixes if they differ.
+- [ ] `CONTRIBUTING.md` → `## Tests` — state the expectation and which tiers run
+      where.
+      <!-- template:contributing-tests -->
 - [ ] `.gitignore` — add your stack's ignores (this one covers only the basics).
+      <!-- template:gitignore-stack -->
 - [ ] `.gitattributes` — add your stack's binary/generated rules. **Leave
       `* text=auto eol=lf` alone**: `.githooks/*` are POSIX `sh`, and a CRLF
       checkout makes git look for an interpreter named `/bin/sh\r`, failing with
       a message that names neither the hook nor the cause.
+      <!-- template:gitattributes-stack-rules -->
 - [ ] `.editorconfig` — add your stack's indent overrides. It is a convenience,
       not a gate; nothing enforces it.
-- [ ] `SECURITY.md` — pick a reporting channel, delete the others, and set the
-      supported-versions answer. Promise only what you will actually do.
+      <!-- template:editorconfig-overrides -->
+- [ ] `SECURITY.md` — pick a reporting channel and delete the others, set the
+      supported-versions answer, and say what a reporter can expect back.
+      Promise only what you will actually do.
+      <!-- template:security-report-channel -->
+      <!-- template:security-response-expectations -->
+      <!-- template:security-supported-versions -->
 - [ ] **Replace `LICENSE` with your project's.** The one shipped here is MIT and
       covers *this template* — it is what lets you copy these files at all, not a
       recommendation for what you build. Two things follow:
@@ -44,13 +104,17 @@ Most items correspond to a `TODO(template)` marker in the tree —
 
 ## 2. Build and test
 
-- [ ] `AGENTS.md` → `## Build / test / run` — the actual commands.
+- [ ] `AGENTS.md` → `## Build / test / run` — the actual commands, plus any
+      test tier deliberately excluded from the fast path and where it does run.
+      <!-- template:agents-commands --> <!-- template:agents-test-tiers -->
 - [ ] `.github/workflows/ci.yml` → the `build-and-test` job steps. The shipped
       placeholder **passes while this file exists and fails once you delete it**
       (step 7), so an un-set-up template is not permanently red and a set-up
       repo cannot ship a vacuously green build job.
+      <!-- template:ci-overview --> <!-- template:ci-build-and-test -->
 - [ ] `.githooks/pre-commit` → the per-stack blocks and their path filters.
-  Keep it under ~2s. Anything slower belongs in CI.
+      Keep it under ~2s. Anything slower belongs in CI.
+      <!-- template:precommit-stack-blocks -->
 - [ ] Install [`actionlint`](https://github.com/rhysd/actionlint) and
       [`shellcheck`](https://www.shellcheck.net) so the workflow/shell block in
       `pre-commit` actually runs. It **warns and continues** when they are
@@ -74,7 +138,11 @@ Most items correspond to a `TODO(template)` marker in the tree —
 - [ ] If you publish container images: read
       [`docs/decisions/002-release-and-publish.md`](docs/decisions/002-release-and-publish.md)
       and add the publish/promote jobs. The template ships the reasoning, not the
-      jobs, because they are registry-specific.
+      jobs, because they are registry-specific. Record in `AGENTS.md` what is
+      published per merge and that promotion is a **retag of the reviewed bytes,
+      never a rebuild**.
+      <!-- template:release-publish-gate -->
+      <!-- template:agents-publish-promotion -->
 
 ## 4. Security gates
 
@@ -84,9 +152,15 @@ Most items correspond to a `TODO(template)` marker in the tree —
       while `TEMPLATE-SETUP.md` exists and fails once you delete it, so a fresh
       clone does not go red every Monday on a schedule nobody triggered. A guard
       in `.github/scripts/workflows.test.mjs` keeps the two behaving the same.
+      <!-- template:ci-audit-ecosystems --> <!-- template:audit-steps -->
 - [ ] `.github/scripts/vuln-gate.mjs` — if your ecosystem is not npm or NuGet,
       add a parser (see the `PARSERS` map and the comment above it).
-- [ ] `.github/dependabot.yml` — set the directories and ecosystems.
+      <!-- template:vuln-gate-parser -->
+- [ ] `.github/dependabot.yml` — set the directories and ecosystems, and
+      exclude from the grouped bump any action that holds write permissions and
+      ships a bundled `dist/`, so its bumps arrive standalone.
+      <!-- template:dependabot-ecosystems -->
+      <!-- template:dependabot-action-exclusions -->
 - [ ] **Dependabot alerts + Dependency graph.** One call does both — enabling
       alerts switches the graph on as a side effect:
 
@@ -105,10 +179,12 @@ Most items correspond to a `TODO(template)` marker in the tree —
       application code — a gate that reads as safety while analysing none of what
       you ship. Add the languages you actually ship, e.g.
       `["actions", "csharp", "javascript-typescript"]`.
+      <!-- template:codeql-languages -->
 - [ ] `.github/workflows/codeql.yml` → **compiled languages need a build step**
       (`csharp`, `java`, `go`, `c-cpp`) between `init` and `analyze`. Carry the
       same `if: steps.scanning.outputs.available == 'true'` onto it, or the build
       runs against a skipped analysis and fails with no CodeQL database.
+      <!-- template:codeql-compiled-build -->
 - [ ] **Code scanning**, the repo setting `codeql.yml` needs. A **public** repo
       needs nothing here.
       A private repo needs GitHub Advanced Security; until then the job skips
@@ -160,6 +236,7 @@ Most items correspond to a `TODO(template)` marker in the tree —
 
       Shipping a file that looks like a control and is not one is the failure
       here, not the missing control itself.
+      <!-- template:codeowners-setup -->
 - [ ] `.github/pull_request_template.md` — prune the checklist to the rules this
       repo actually enforces. A box nobody can fail teaches people to tick
       without reading.

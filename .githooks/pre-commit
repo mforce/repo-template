@@ -27,7 +27,7 @@ fail() { echo "pre-commit: FAILED ($1) — fix or use --no-verify." >&2; exit 1;
 
 # --- workflows and shell -----------------------------------------------------
 #
-# These two are NOT a TODO(template) block: this repo's own substance is GitHub
+# These two are NOT a template slot: this repo's own substance is GitHub
 # workflows and POSIX shell, and neither has a compiler. A typo'd `runs-on`, a
 # `${{ }}` in the wrong context, an unquoted expansion — all of them are found by
 # a red CI run minutes later, or by nobody.
@@ -81,7 +81,7 @@ fi
 [ -n "$lint_missing" ] && \
   echo "pre-commit: NOT linted —${lint_missing} not installed. These checks were skipped." >&2
 
-# TODO(template) one block per stack. Pattern:
+# TODO(template:precommit-stack-blocks) one block per stack. Pattern:
 #
 #   if echo "$staged" | grep -qE '<path or extension filter>'; then
 #     echo "pre-commit: <what is running>..."

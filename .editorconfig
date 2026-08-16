@@ -22,7 +22,7 @@ trim_trailing_whitespace = false
 [Makefile]
 indent_style = tab
 
-# TODO(template) add your stack's overrides, e.g.
+# TODO(template:editorconfig-overrides) add your stack's overrides, e.g.
 #   [*.{cs,csproj}]
 #   indent_size = 4
 #   [*.go]

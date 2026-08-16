@@ -1,4 +1,4 @@
-# TODO(template) add your stack's ignores.
+# TODO(template:gitignore-stack) add your stack's ignores.
 
 # Editors / OS
 .DS_Store

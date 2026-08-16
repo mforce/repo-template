@@ -1,6 +1,6 @@
-# AGENTS.md — TODO(template) project name
+# AGENTS.md — TODO(template:agents-project-name) project name
 
-TODO(template) one line: what this is, the stack, the datastore.
+TODO(template:agents-one-line) one line: what this is, the stack, the datastore.
 
 This file is the shared brief for any coding agent (Claude Code, Codex, Cursor,
 …). `CLAUDE.md` is a one-line include of it, so there is exactly one copy.
@@ -14,7 +14,7 @@ This file is the shared brief for any coding agent (Claude Code, Codex, Cursor,
 
 ## Communicating
 
-TODO(template) how you want responses. A starting point:
+TODO(template:agents-communicating) how you want responses. A starting point:
 
 Keep explanations clear and human-sounding. Lead with the action or the answer;
 skip preambles and recaps.
@@ -22,25 +22,25 @@ skip preambles and recaps.
 ## Layout
 
 ```
-TODO(template)
+TODO(template:agents-layout)
 src/          ...
 tests/        ...
 docs/         decisions (ADRs), runbooks
 ```
 
-TODO(template) state the dependency direction if the layout has one, e.g.
+TODO(template:agents-dependency-direction) state the dependency direction if the layout has one, e.g.
 "dependencies point inward: Api → Application → Domain; Domain depends on
 nothing."
 
 ## Build / test / run
 
 ```bash
-TODO(template) build
-TODO(template) test          # note anything that needs Docker/network/a DB
-TODO(template) run locally
+TODO(template:agents-commands) build
+TODO(template:agents-commands) test          # note anything that needs Docker/network/a DB
+TODO(template:agents-commands) run locally
 ```
 
-TODO(template) note any test tier that is deliberately excluded from the fast
+TODO(template:agents-test-tiers) note any test tier that is deliberately excluded from the fast
 path, and where it does run instead.
 
 ## Conventions
@@ -49,15 +49,15 @@ path, and where it does run instead.
 > consequence of breaking it, and — once there is one — the incident that earned
 > it. Add them as you learn them.
 
-- **TODO(template)** — e.g. error handling: exceptions vs a `Result` type, and
+- **TODO(template:agents-conventions)** — e.g. error handling: exceptions vs a `Result` type, and
   which failures are "expected".
-- **TODO(template)** — e.g. how a request is validated, and where.
-- **TODO(template)** — e.g. what a new database migration must and must not do.
+- **TODO(template:agents-conventions)** — e.g. how a request is validated, and where.
+- **TODO(template:agents-conventions)** — e.g. what a new database migration must and must not do.
 
 ## Secrets — never commit
 
-- TODO(template) where real values live (env file, secret store, `user-secrets`).
-- TODO(template) where placeholders live (`*.example`), and that they are
+- TODO(template:agents-secrets) where real values live (env file, secret store, `user-secrets`).
+- TODO(template:agents-secrets) where placeholders live (`*.example`), and that they are
   placeholders — an example file must never carry a usable credential.
 - No hardcoded passwords or keys in source, **including tests**. Generate test
   credentials at runtime; secret scanners flag literals in test files too, and
@@ -82,7 +82,7 @@ provider.
 Reviewers: treat a hardcoded provider name in code, config, or a committed doc
 like a missing test — flag it.
 
-TODO(template) delete this section if the repo is not deployed.
+TODO(template:agents-deployment-boundary) delete this section if the repo is not deployed.
 
 ## Writing a guard (a test that asserts an invariant)
 
@@ -134,7 +134,7 @@ shape (`tj-actions/changed-files`, 2025-03; `aquasecurity/trivy-action`,
 2026-03), and a mutable tag means you review one thing and run another.
 `actions/*` and `github/*` may keep major-version tags.
 
-TODO(template) if your ecosystem uses lock files, state here that a package
+TODO(template:agents-lockfile-rule) if your ecosystem uses lock files, state here that a package
 add/bump must commit the regenerated lock file **in the same commit**, or CI's
 locked-mode restore fails.
 
@@ -166,7 +166,7 @@ Invariants — the mechanism is in
   a `Release-As:` footer.
 - **Never hand-edit `.release-please-manifest.json` or `version.txt`.**
 
-TODO(template) if you publish artifacts, add: what is published per merge, what
+TODO(template:agents-publish-promotion) if you publish artifacts, add: what is published per merge, what
 promotion means, and that promotion is a **retag of the reviewed bytes, never a
 rebuild**.
 
@@ -180,14 +180,14 @@ rebuild**.
   as permission.
 - Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`. PRs squash-merge.
 - Only commit or push when the human asks.
-- TODO(template) issue-tracker conventions: which tracker is authoritative,
+- TODO(template:agents-issue-tracker) issue-tracker conventions: which tracker is authoritative,
   whether slices go on an epic checklist, milestone rules.
-- TODO(template) documentation-sync rule: name the files that must be updated in
+- TODO(template:agents-doc-sync) documentation-sync rule: name the files that must be updated in
   the same PR as a user-visible change (a glossary, an in-app help page), and
   say that a reviewer treats a missing doc update like a missing test.
 
 ## Project context
 
-TODO(template) what phase the project is in, what is shipped, what is next, and
+TODO(template:agents-project-context) what phase the project is in, what is shipped, what is next, and
 where the domain vocabulary is defined. Agents read this to decide whether a
 thing is "not built yet" or "deliberately absent".

@@ -28,7 +28,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # TODO(template) toolchain setup + the same audit steps as ci.yml.
+      # TODO(template:audit-steps) toolchain setup + the same audit steps as ci.yml.
       # Keep them identical; a scheduled gate that is weaker than the PR gate
       # produces a green Monday and a red Tuesday for the same tree.
       #

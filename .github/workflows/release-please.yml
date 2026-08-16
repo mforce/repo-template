@@ -65,7 +65,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # TODO(template) if you publish artifacts, gate them on this output and
+      # TODO(template:release-publish-gate) if you publish artifacts, gate them on this output and
       # read docs/decisions/002-release-and-publish.md first — in particular:
       # promotion is a retag of the reviewed bytes, never a rebuild.
       - name: Report

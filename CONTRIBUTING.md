@@ -68,7 +68,7 @@ Two traps, both of which produce a **green run with no release entry**:
 
 ## Tests
 
-TODO(template) state the expectation, e.g. "every change to `src/` ships with
+TODO(template:contributing-tests) state the expectation, e.g. "every change to `src/` ships with
 tests in the same PR", and which tiers run where.
 
 ## Reviewing

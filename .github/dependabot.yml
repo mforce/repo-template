@@ -27,7 +27,7 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
-        # TODO(template) exclude any action that holds write permissions and
+        # TODO(template:dependabot-action-exclusions) exclude any action that holds write permissions and
         # ships a bundled `dist/`. A SHA pin only protects you up to the moment
         # someone rubber-stamps the bump that moves it, and a bundled dist rolled
         # into a routine grouped PR is the exact shape of the 2025-03 tj-actions
@@ -36,7 +36,7 @@ updates:
           - "googleapis/release-please-action"
           - "actions/create-github-app-token"
 
-  # TODO(template) add one block per ecosystem/directory you use. Examples:
+  # TODO(template:dependabot-ecosystems) add one block per ecosystem/directory you use. Examples:
   #
   # - package-ecosystem: "npm"
   #   directory: "/web"

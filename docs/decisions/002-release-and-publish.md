@@ -102,7 +102,7 @@ The invariants above are registry-agnostic; this is one concrete wiring of them
 for OCI images pushed to GHCR, adapted from the pipeline proposed in
 [mforce/collectify#116](https://github.com/mforce/collectify/pull/116) (not yet
 merged, so treat it as a worked design, not a battle-tested one). Copy the jobs,
-then fill the `TODO(template)` markers. Everything registry-specific is a
+then fill the `TODO(template:<slug>)` markers. Everything registry-specific is a
 `vars`/`secrets` lookup, so the same jobs target Gitea/Harbor by setting
 `REGISTRY`, `IMAGE_NAME`, `REGISTRY_USER`, `REGISTRY_TOKEN` — no YAML change.
 
@@ -129,7 +129,7 @@ env:
 ### 1. `ci.yml` — build, scan, and export the image (app-specific)
 
 The build + scan + boot-smoke half is where your stack shows through, so it stays
-a `TODO(template)`. The contract it must satisfy for the publish job below:
+a `TODO(template:<slug>)`. The contract it must satisfy for the publish job below:
 
 - Build the runtime image to a local tag (e.g. `app:ci`) with a
   `docker-container` buildx driver and `--load` so the scanner sees the freshly
@@ -177,7 +177,7 @@ attestation leaves no artifact behind.
     name: Publish the commit image
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build-and-test, image]   # TODO(template) add EVERY release-gating job
+    needs: [build-and-test, image]   # TODO(template:release-publish-gate) add EVERY release-gating job
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read

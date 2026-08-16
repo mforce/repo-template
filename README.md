@@ -34,7 +34,7 @@ rm -rf .git && git init -b main
 ```
 
 Then work through [`TEMPLATE-SETUP.md`](TEMPLATE-SETUP.md) and delete it. Nothing
-here is load-bearing until you fill in the slots marked `TODO(template)`.
+here is load-bearing until you fill in the slots marked `TODO(template:<slug>)`.
 
 ## The one rule about copying this
 

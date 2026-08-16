@@ -322,6 +322,9 @@ The load-bearing details, each of which has a wrong default:
   caller with push, so probing with the ambient token lists none and the guard
   silently never fires.
 
-A full worked copy of all three jobs lives at
-[mforce/collectify `.github/workflows/`](https://github.com/mforce/collectify/tree/main/.github/workflows)
-(`ci.yml` publish job, `release-please.yml` promote/groom).
+A full worked copy of all three jobs lives in
+[mforce/collectify#116](https://github.com/mforce/collectify/pull/116/files)
+(`ci.yml` publish job, `release-please.yml` promote/groom) — unmerged, so read it
+as the same worked design, not as shipped code. (Once it merges this becomes a
+`tree/main` link; the PR-files URL is used here because the branch disappears on
+merge while the PR link survives.)

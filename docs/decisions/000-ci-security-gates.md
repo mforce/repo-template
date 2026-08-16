@@ -68,11 +68,26 @@ The gate blocks whenever it cannot be sure:
   no `vulnerabilities` key and a non-zero exit — which a workflow's `|| true`
   swallows. Without a shape check that parses as zero findings and passes;
 - **a malformed exception never suppresses**, and is reported as a warning so it
-  gets fixed rather than silently doing nothing.
+  gets fixed rather than silently doing nothing;
+- **an unrecognised `--level` is exit 2**, not a threshold. This one is earned,
+  not forward-looking: the first version ranked the threshold with the same
+  function as a finding's severity, so `--level hihg` put the floor one rung
+  *above* `critical` and a real critical advisory reported "below threshold" —
+  green run, gate open, from a typo. The two look alike and are opposites: an
+  unknown **finding** severity must sort high (block), an unknown **threshold**
+  is our own string and must be refused. Found while reviewing this script's
+  copy in another repo, 2026-08; fixed in
+  [`levelProblem`](../../.github/scripts/vuln-gate.mjs), enforced in `main()`
+  *and* in `gate()` so no caller can reintroduce it;
+- **a corrupt exceptions file warns**. It already suppressed nothing (the safe
+  direction), but silently — so the exceptions someone wrote could be gone with
+  no sign of it. Only a missing file is quiet, because that is the normal case.
 
 Each of those is pinned by a test in `.github/scripts/vuln-gate.test.mjs`, and
 each test was mutation-checked: the corresponding line was broken and the run
-confirmed red on that test's own assertion.
+confirmed red on that test's own assertion. The `--level` case is checked
+**end to end through the CLI** — every unit in that pipeline behaved correctly
+on its own, and only the assembled exit code showed the hole.
 
 ## Why exceptions must expire
 

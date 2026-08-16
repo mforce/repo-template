@@ -24,7 +24,9 @@ the check.
 
 ## Branches and PRs
 
-- `main` is protected. Branch, push, open a PR.
+- Never commit to `main`. Branch, push, open a PR — whether or not branch
+  protection is actually switched on (a private repo on the free plan cannot
+  have it). A push to `main` succeeding does not mean it was allowed.
 - Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`.
 - PRs squash-merge.
 - The PR body is prefilled from

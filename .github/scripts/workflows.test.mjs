@@ -67,6 +67,54 @@ test("every unimplemented placeholder is keyed to TEMPLATE-SETUP.md, not an unco
   }
 });
 
+// Release automation is gated on the template's own placeholder package name.
+// A fresh clone has not chosen one, and release-please there pushes its branch
+// and then dies on PR creation — GITHUB_TOKEN cannot open a PR unless the repo
+// setting is on — so the first push to main goes red for a reason no branch can
+// fix. That is the shape docs/decisions/000 rules out.
+//
+// The gate is one file grepping a literal string out of another, which stops
+// matching silently if either side is reworded. This pins them together.
+test("release automation stays idle while the package name is the template placeholder", () => {
+  const root = fileURLToPath(new URL("../../", import.meta.url));
+  const workflow = workflows.find((w) => w.name === "release-please.yml");
+  let config = null;
+  try {
+    config = JSON.parse(readFileSync(join(root, "release-please-config.json"), "utf8"));
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+
+  // Dropping the `releases` part deletes both. Either one alone is the state
+  // worth failing on: a workflow with no config cannot run, and a config with
+  // no workflow never does.
+  assert.equal(
+    Boolean(workflow),
+    Boolean(config),
+    "release-please.yml and release-please-config.json must be present or absent together",
+  );
+  if (!workflow || !config) return;
+
+  const name = config.packages?.["."]?.["package-name"];
+  assert.ok(name, "release-please-config.json has no package-name for the root package");
+  // Once an adopter names the package the gate has done its job and opens; there
+  // is nothing left to pin, and asserting anything here would be a red they
+  // could not act on.
+  if (!name.includes("TODO")) return;
+
+  assert.ok(
+    workflow.body.includes(name),
+    `release-please.yml must test for the exact placeholder ${JSON.stringify(name)} — it ` +
+      `greps the config for it to decide whether to run, so a reworded placeholder turns ` +
+      `the gate off and an un-set-up repo goes red on its first push to main`,
+  );
+  assert.match(
+    workflow.body,
+    /::notice title=[^:]*idle/,
+    "release-please.yml must say why it did nothing; a silent skip reads as a working release",
+  );
+});
+
 // Every third-party action is pinned to a full 40-hex commit SHA with a trailing
 // version comment. `actions/*` and `github/*` may keep major tags — GitHub owns
 // those namespaces. Tag retargeting is a live supply-chain shape

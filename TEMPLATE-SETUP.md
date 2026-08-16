@@ -51,10 +51,18 @@ withdrawn.
 
 ## 3. Releases
 
+- [ ] **Let Actions open the release PR, before you do the next item.** Either
+      set `RELEASE_APP_CLIENT_ID` / `RELEASE_APP_PRIVATE_KEY` to a GitHub App, or
+      turn on Settings → Actions → General → **Allow GitHub Actions to create and
+      approve pull requests**. Without one of the two, release-please pushes its
+      branch and then fails; with the setting rather than the App, the release PR
+      it opens **gets no CI run**, so it merges unverified.
 - [ ] `release-please-config.json` → `package-name`, `release-type`, and
       `extra-files` if a version string is embedded anywhere. Keep `package-name`
       free of `:` — release-please derives its release-PR branch from it, and an
-      invalid ref stops the release PR being created.
+      invalid ref stops the release PR being created. **Naming the package is
+      what switches release automation on**: until then the workflow reports
+      idle and stops, so a fresh clone is not red on its first push to `main`.
 - [ ] Decide the pre-1.0 policy. The shipped config damps `feat!:` to **minor**
       and everything else to **patch**, and that mapping **flips silently at
       1.0.0**. Get there deliberately with a `Release-As: 1.0.0` footer.

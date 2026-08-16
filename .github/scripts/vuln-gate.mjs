@@ -18,7 +18,8 @@
 //   dotnet list package --vulnerable --include-transitive --format json --output-version 1 \
 //     | node .github/scripts/vuln-gate.mjs --ecosystem nuget
 //
-// Flags: --level <low|moderate|high|critical>  (default high — blocks at or above)
+// Flags: --level <info|low|moderate|high|critical>  (default high — blocks at or
+//                                              above; an unknown value exits 2)
 //        --warn-only                           (report, always exit 0)
 //        --exceptions <path>                   (default .github/security-exceptions.json)
 //        --emit-allowlist                      (print live GHSA ids for dependency-review)
@@ -48,6 +49,16 @@ const ONE_DAY_MS = 86_400_000;
 export function severityRank(severity) {
   const i = SEVERITIES.indexOf(String(severity ?? "").toLowerCase());
   return i < 0 ? UNKNOWN_RANK : i;
+}
+
+// The threshold is one of OUR strings, so an unrecognised one is a bad
+// invocation — NOT a severity. Ranking it like a finding (above `critical`) puts
+// the floor out of reach of every real advisory, so `--level hihg` reports a
+// critical as "below threshold" and exits 0. Fail-open, from a typo.
+export function levelProblem(level) {
+  return SEVERITIES.includes(String(level ?? "").toLowerCase())
+    ? null
+    : `--level must be one of ${SEVERITIES.join(", ")} (got "${level}")`;
 }
 
 // Ecosystems point their advisory URLs at GitHub Security Advisories, so a GHSA
@@ -205,14 +216,29 @@ function isLive(exception, now) {
   return Number.isFinite(dayStart) && now.getTime() < dayStart + ONE_DAY_MS;
 }
 
+// One definition of "which ecosystem is this exception scoped to", so
+// suppression and the lapsed-entry warning can never disagree about it. They did
+// once: suppression lower-cased, the warning compared `=== "any"` raw, so a
+// lapsed `"ANY"` entry stopped suppressing without ever being reported lapsed.
+const scopeOf = (exception) => String(exception.ecosystem).toLowerCase();
+
+function inScope(exception, ecosystem) {
+  const scope = scopeOf(exception);
+  return scope === "any" || scope === ecosystem;
+}
+
 function matches(exception, finding, ecosystem) {
-  const scope = String(exception.ecosystem).toLowerCase();
-  if (scope !== "any" && scope !== ecosystem) return false;
+  if (!inScope(exception, ecosystem)) return false;
   return canonicalGhsa(exception.id) === finding.id;
 }
 
 export function gate({ findings, exceptions = [], ecosystem, level = "high", now = new Date() }) {
-  const floor = severityRank(level);
+  const problem = levelProblem(level);
+  // Refuse rather than compute an unreachable floor — see `levelProblem`. The
+  // CLI validates first; this is the backstop for every other caller.
+  if (problem) throw new Error(problem);
+
+  const floor = SEVERITIES.indexOf(String(level).toLowerCase());
   const atOrAbove = findings.filter((f) => severityRank(f.severity) >= floor);
 
   const valid = exceptions.filter(isValidException);
@@ -220,8 +246,6 @@ export function gate({ findings, exceptions = [], ecosystem, level = "high", now
   const invalidExceptions = exceptions
     .filter((e) => !isValidException(e))
     .map((e) => ({ raw: e, problem: exceptionProblem(e) }));
-
-  const inScope = (e) => e.ecosystem === "any" || e.ecosystem.toLowerCase() === ecosystem;
 
   const suppressed = [];
   const blocking = [];
@@ -233,7 +257,7 @@ export function gate({ findings, exceptions = [], ecosystem, level = "high", now
 
   // Valid, in-scope, but past its window — surfaced so a lapsed entry gets
   // deleted instead of lingering as dead config.
-  const staleExceptions = valid.filter((e) => inScope(e) && !isLive(e, now));
+  const staleExceptions = valid.filter((e) => inScope(e, ecosystem) && !isLive(e, now));
 
   return {
     blocking,
@@ -320,12 +344,35 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function loadExceptions(path) {
+// A missing file is the normal case and stays quiet. Anything else — corrupt
+// JSON, an `exceptions` key that is not an array, an unreadable file — silently
+// suppresses NOTHING (the safe direction) but must be said out loud, or the
+// exceptions someone wrote are gone with no sign of it.
+export function loadExceptions(path, warn = console.error) {
+  let raw;
   try {
-    return JSON.parse(readFileSync(path, "utf8")).exceptions ?? [];
-  } catch {
-    return []; // no file → empty allowlist, the normal case
+    raw = readFileSync(path, "utf8");
+  } catch (err) {
+    if (err.code === "ENOENT") return [];
+    warn(`::warning::could not read ${path} (${err.code ?? err.message}) — no advisory is excepted`);
+    return [];
   }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    warn(`::warning::${path} is not valid JSON (${err.message}) — no advisory is excepted`);
+    return [];
+  }
+
+  const list = parsed?.exceptions;
+  if (list === undefined || list === null) return [];
+  if (!Array.isArray(list)) {
+    warn(`::warning::${path} has an "exceptions" key that is not an array — no advisory is excepted`);
+    return [];
+  }
+  return list;
 }
 
 async function main() {
@@ -340,6 +387,15 @@ async function main() {
 
   if (!PARSERS[options.ecosystem]) {
     console.error(`usage: vuln-gate.mjs --ecosystem ${Object.keys(PARSERS).join("|")} [--level high] [--warn-only]`);
+    process.exitCode = 2;
+    return;
+  }
+
+  // Before reading any input: an unusable threshold is a usage error, never a
+  // clean run. Without this the gate reports every advisory "below threshold".
+  const levelIssue = levelProblem(options.level);
+  if (levelIssue) {
+    console.error(`::error::[${options.ecosystem}] ${levelIssue}`);
     process.exitCode = 2;
     return;
   }

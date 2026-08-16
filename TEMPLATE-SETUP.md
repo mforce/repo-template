@@ -7,8 +7,13 @@ item below, which carries a matching `<!-- template:<slug> -->` comment. List
 what is left:
 
 ```bash
-grep -rn 'TODO(template:' .
+grep -rn 'TODO(template:[a-z0-9-]' .
 ```
+
+The character class is load-bearing. Dropping it also matches the literal
+`TODO(template:<slug>)` that this file, the README, ADR 002 and the guard's own
+source use when *describing* the convention — eight lines of prose mixed in with
+the real work.
 
 `.github/scripts/template.test.mjs` enforces the correspondence **in both
 directions**: a slot with no item fails, and an item pointing at a slot that no

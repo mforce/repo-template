@@ -1,8 +1,21 @@
 # Template setup checklist
 
-Work through this after cloning, then **delete this file**. Every item
-corresponds to a `TODO(template)` marker in the tree — `grep -rn 'TODO(template)' .`
-finds the ones you have not done.
+Work through this after cloning, then **delete this file**.
+
+Most items correspond to a `TODO(template)` marker in the tree —
+`grep -rn 'TODO(template)' .` lists them. Two cautions, both earned:
+
+- **The marker list is not the checklist.** Some items are *repo settings*
+  (branch protection, Dependabot alerts) that no marker can represent, and one
+  file can carry several markers while this file mentions it once. Finishing the
+  grep is not finishing the setup.
+- **Read every marker in a file you touch, not just the one you came for.**
+  `codeql.yml` shipped a `language:` matrix defaulting to `["actions"]` while
+  this checklist named the file only for a repo setting — an adopter could tick
+  everything and still have CodeQL passing green having never analysed their
+  application code. `.github/scripts/template.test.mjs` now catches the
+  file-level version of that mistake, and says plainly that it does **not** catch
+  the slot-level one.
 
 ## 1. Identity
 
@@ -86,7 +99,18 @@ finds the ones you have not done.
       returns 200; until then it warns on every PR rather than passing silently.
       (`automated-security-fixes` is a separate choice — it opens fix PRs and has
       no bearing on the graph.)
-- [ ] **Code scanning**, for `codeql.yml`. A **public** repo needs nothing here.
+- [ ] `.github/workflows/codeql.yml` → **the `language:` matrix**. It ships
+      `["actions"]`, which scans your workflow files and **nothing else**. Leave
+      it unset and CodeQL passes green on every PR having never looked at your
+      application code — a gate that reads as safety while analysing none of what
+      you ship. Add the languages you actually ship, e.g.
+      `["actions", "csharp", "javascript-typescript"]`.
+- [ ] `.github/workflows/codeql.yml` → **compiled languages need a build step**
+      (`csharp`, `java`, `go`, `c-cpp`) between `init` and `analyze`. Carry the
+      same `if: steps.scanning.outputs.available == 'true'` onto it, or the build
+      runs against a skipped analysis and fails with no CodeQL database.
+- [ ] **Code scanning**, the repo setting `codeql.yml` needs. A **public** repo
+      needs nothing here.
       A private repo needs GitHub Advanced Security; until then the job skips
       with a warning rather than failing the run for a setting no code change can
       fix. Do **not** reach for

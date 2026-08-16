@@ -58,7 +58,11 @@ finds the ones you have not done.
 ## 4. Security gates
 
 - [ ] `.github/workflows/ci.yml` + `security-audit.yml` — enable the ecosystems
-      you actually use; delete the rest.
+      you actually use; delete the rest. **`security-audit.yml`'s placeholder is
+      keyed to this file exactly like `ci.yml`'s build step** (step 2): it warns
+      while `TEMPLATE-SETUP.md` exists and fails once you delete it, so a fresh
+      clone does not go red every Monday on a schedule nobody triggered. A guard
+      in `.github/scripts/workflows.test.mjs` keeps the two behaving the same.
 - [ ] `.github/scripts/vuln-gate.mjs` — if your ecosystem is not npm or NuGet,
       add a parser (see the `PARSERS` map and the comment above it).
 - [ ] `.github/dependabot.yml` — set the directories and ecosystems.

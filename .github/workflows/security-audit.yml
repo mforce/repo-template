@@ -31,7 +31,24 @@ jobs:
       # TODO(template) toolchain setup + the same audit steps as ci.yml.
       # Keep them identical; a scheduled gate that is weaker than the PR gate
       # produces a green Monday and a red Tuesday for the same tree.
+      #
+      # Keyed to TEMPLATE-SETUP.md, exactly like ci.yml's `build-and-test`
+      # placeholder, and for the reason ADR 000 gives: a red check nobody can fix
+      # from a branch is worse than a missing check, because it teaches everyone
+      # to ignore red — and that habit does not stay confined to the check that
+      # earned it. An unconditional `exit 1` here fails EVERY Monday on a fresh
+      # clone, on a schedule nobody opened a PR to trigger, for a reason no
+      # change can address until the repo has a stack at all.
+      #
+      # So: warn while the repo is admittedly un-set-up, fail once it claims to
+      # be set up. The two placeholders must keep behaving the same way; if you
+      # change one, change the other.
       - name: Audit
         run: |
-          echo "TODO(template): run the same vuln-gate steps as ci.yml" >&2
+          set -eu
+          if [ -f TEMPLATE-SETUP.md ]; then
+            echo "::warning title=Weekly audit not implemented::security-audit.yml still carries the template placeholder instead of the real audit steps. It passes while TEMPLATE-SETUP.md exists; deleting that file (checklist step 7) makes this step fail until you replace it."
+            exit 0
+          fi
+          echo "::error title=Weekly audit not implemented::TEMPLATE-SETUP.md is gone, so this repo is set up — but security-audit.yml still carries the placeholder. Replace it with the same vuln-gate steps ci.yml runs."
           exit 1

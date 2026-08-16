@@ -67,6 +67,116 @@ test("every unimplemented placeholder is keyed to TEMPLATE-SETUP.md, not an unco
   }
 });
 
+// Release automation is gated on the template's own placeholder package name.
+// A fresh clone has not chosen one, and release-please there pushes its branch
+// and then dies on PR creation — GITHUB_TOKEN cannot open a PR unless the repo
+// setting is on — so the first push to main goes red for a reason no branch can
+// fix. That is the shape docs/decisions/000 rules out.
+//
+// The gate is one file grepping a literal string out of another, so it stops
+// matching silently if either side is reworded. Both sides are checked against
+// the declaration below rather than against each other — comparing them to each
+// other cannot tell a maintainer's typo from an adopter naming their package,
+// and the version that guessed (any name containing "TODO" is a placeholder)
+// would have gone red on an adopter who picked one.
+//
+// Reading the whole command, not the literal alone: `grep -qv` keeps the string
+// and inverts the gate, which would leave release automation idle forever in a
+// repo that finished setup.
+//
+// LIMIT, stated: an adopter's own package name is not checked against anything,
+// so rewording the placeholder in the config ALONE is not caught. That direction
+// arms the workflow rather than disarming it, and it shows up as the same red
+// this gate exists to prevent, on the first push after the change.
+const PLACEHOLDER = "TODO-template-package-name";
+
+test("release automation stays idle while the package name is the template placeholder", () => {
+  const root = fileURLToPath(new URL("../../", import.meta.url));
+  const workflow = workflows.find((w) => w.name === "release-please.yml");
+  let config = null;
+  try {
+    config = JSON.parse(readFileSync(join(root, "release-please-config.json"), "utf8"));
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+
+  // Dropping the `releases` part deletes both. Either one alone is the state
+  // worth failing on: a workflow with no config cannot run, and a config with
+  // no workflow never does.
+  assert.equal(
+    Boolean(workflow),
+    Boolean(config),
+    "release-please.yml and release-please-config.json must be present or absent together",
+  );
+  if (!workflow || !config) return;
+
+  assert.ok(
+    config.packages?.["."]?.["package-name"],
+    "release-please-config.json has no package-name for the root package",
+  );
+
+  // Which branch does what, not just which strings appear. A swap of the two
+  // assignments, or an inverted grep, keeps every literal and ships a gate that
+  // is either always open or never open.
+  const gate = workflow.body.match(
+    /if ! grep -q '([^']*)' release-please-config\.json; then\n\s*echo "named=true"[\s\S]{0,120}?\n\s*elif \[ -f TEMPLATE-SETUP\.md \]; then\n\s*echo "named=false"/,
+  );
+  assert.ok(
+    gate,
+    "release-please.yml must decide in this order: a named package runs release-please, " +
+      "the placeholder plus TEMPLATE-SETUP.md warns and stops, anything else fails. Any " +
+      "other spelling inverts the gate or drops a state, and both are silent",
+  );
+  assert.equal(
+    gate[1],
+    PLACEHOLDER,
+    `release-please.yml greps for ${JSON.stringify(gate[1])}, but the template's placeholder ` +
+      `package name is ${JSON.stringify(PLACEHOLDER)} — a gate that cannot match arms release ` +
+      `automation on an un-set-up repo, which goes red on its first push to main`,
+  );
+
+  // The third state is the one that earned this: a repo that deleted the
+  // checklist without naming the package has declared itself set up, and a gate
+  // that stays quiet there disables releases for good with a green tick over it.
+  assert.match(
+    workflow.body,
+    /else\n\s*echo "::error title=[^:]*not implemented[\s\S]{0,600}?\n\s*exit 1\n/,
+    "release-please.yml must fail once TEMPLATE-SETUP.md is gone and the package is still " +
+      "unnamed — silently skipping there is a release pipeline nobody knows is off",
+  );
+
+  // Both files the gate reads have to be IN the checkout. A sparse checkout that
+  // omits one makes `[ -f ]` false everywhere and the test above cannot see it:
+  // the workflow reads correctly and behaves as if the file never exists.
+  //
+  // Only when the checkout IS sparse. Dropping the narrowing for a plain full
+  // checkout leaves both files present and the workflow correct, and an earlier
+  // version failed there — a red on a change that broke nothing.
+  const key = workflow.body.match(/^([ \t]*)sparse-checkout:[ \t]*(.*)$/m);
+  if (!key) return;
+
+  let listed;
+  if (key[2].trim().startsWith("|")) {
+    const after = workflow.body.slice(workflow.body.indexOf(key[0]) + key[0].length).split("\n").slice(1);
+    listed = [];
+    for (const line of after) {
+      if (line.trim() === "") continue;
+      if (line.length - line.replace(/^[ \t]*/, "").length <= key[1].length) break;
+      listed.push(line.trim());
+    }
+  } else {
+    listed = [key[2].trim()]; // one path, inline
+  }
+
+  for (const file of ["release-please-config.json", "TEMPLATE-SETUP.md"]) {
+    assert.ok(
+      listed.includes(file),
+      `${file} is read by the gate but not in the sparse-checkout — it will be missing at ` +
+        `runtime, and the gate reads a repo that does not contain it`,
+    );
+  }
+});
+
 // Every third-party action is pinned to a full 40-hex commit SHA with a trailing
 // version comment. `actions/*` and `github/*` may keep major tags — GitHub owns
 // those namespaces. Tag retargeting is a live supply-chain shape
